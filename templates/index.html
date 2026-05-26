@@ -110,7 +110,7 @@
 
             <div class="plataformas-container" style="margin-top: 20px;">
                 {% if plataformas %}
-                    <h3 style="color: #999; font-size: 14px; margin-bottom: 10px;">Disponible en:</h3>
+                    <h3 style="color: #999; font-size: 14px; margin-bottom: 10px;">📺 Disponible en streaming:</h3>
                     <div class="iconos-plataformas" style="display: flex; gap: 10px;">
                         {% for plat in plataformas %}
                             <a href="{{ plat.direct_link }}" target="_blank" title="Ver en {{ plat.provider_name }}">
@@ -119,6 +119,17 @@
                         {% endfor %}
                     </div>
                 {% endif %}
+            </div>
+
+            <div class="podcasts-container" style="margin-top: 20px; padding-bottom: 20px;">
+                <h3 style="color: #999; font-size: 14px; margin-bottom: 10px;">🎙️ Buscar podcasts sobre esta película:</h3>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    {% for pod in podcasts %}
+                        <a href="{{ pod.link }}" target="_blank" class="btn-plat" style="background: {{ pod.color }}; color: white; padding: 8px 15px; border-radius: 20px; text-decoration: none; font-weight: bold; font-size: 13px; transition: opacity 0.2s; border: 1px solid rgba(255,255,255,0.2);" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                            {{ pod.icono }} {{ pod.nombre }}
+                        </a>
+                    {% endfor %}
+                </div>
             </div>
 
         </div>
@@ -177,7 +188,6 @@
             });
         });
 
-        // Novedad: Scroll horizontal con la rueda del ratón
         document.querySelectorAll('.carrusel').forEach(carrusel => {
             carrusel.addEventListener('wheel', function(e) {
                 if (e.deltaY !== 0) {

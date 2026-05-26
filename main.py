@@ -44,6 +44,7 @@ async def inicio(request: Request, query: str = None, movie_id: int = None):
     carrusel_titulo = ""
     carrusel_pelis = []
     resultados_busqueda = []
+    podcasts_links = []
     user_avatar = None
     mid = movie_id # ID exacto de la película
 
@@ -124,6 +125,14 @@ async def inicio(request: Request, query: str = None, movie_id: int = None):
                     plat['direct_link'] = obtener_enlace_directo(nombre_base, peli['title'])
                     plataformas.append(plat)
             
+            # --- NUEVO: Generación de enlaces para Podcasts ---
+            titulo_url = urllib.parse.quote(peli['title'])
+            podcasts_links = [
+                {"nombre": "Spotify", "link": f"https://open.spotify.com/search/{titulo_url}/podcasts", "color": "#1DB954", "icono": "🎧"},
+                {"nombre": "iVoox", "link": f"https://www.ivoox.com/buscar_{titulo_url}_sw_1_1.html", "color": "#FF6600", "icono": "🎙️"},
+                {"nombre": "Podimo", "link": f"https://www.google.com/search?q=podcast+{titulo_url}+podimo", "color": "#E8004A", "icono": "▶️"} 
+            ]
+            
             for v in peli.get('videos', {}).get('results', []):
                 if v['type'] == 'Trailer': 
                     trailer = v['key']
@@ -143,7 +152,8 @@ async def inicio(request: Request, query: str = None, movie_id: int = None):
             "username": username, 
             "user_avatar": user_avatar,
             "peli": peli, 
-            "plataformas": plataformas, 
+            "plataformas": plataformas,
+            "podcasts": podcasts_links, # Pasamos los podcasts al HTML
             "trailer": trailer, 
             "error": error, 
             "is_fav": is_fav, 
@@ -152,7 +162,7 @@ async def inicio(request: Request, query: str = None, movie_id: int = None):
             "carrusel_pelis": carrusel_pelis,
             "resultados_busqueda": resultados_busqueda,
             "query_actual": query,
-            "busqueda_activa": bool(movie_id) # Usamos movie_id para activar la vista enfocada
+            "busqueda_activa": bool(movie_id)
         }
     )
 
@@ -243,30 +253,24 @@ async def perfil(request: Request):
         }
     )
 
-# NUEVA RUTA: Recibir y guardar el archivo del avatar
 @app.post("/perfil/avatar", response_class=RedirectResponse)
 async def actualizar_avatar(request: Request, file: UploadFile = File(...)):
     user_id = request.cookies.get("user_id")
     if not user_id:
         return RedirectResponse(url="/", status_code=303)
 
-    # Solo procesamos si es una imagen
     if file.content_type.startswith("image/"):
-        # Construimos el nombre de archivo único para evitar sobreescrituras de otros usuarios
         extension = file.filename.split(".")[-1]
         filename = f"avatar_usuario_{user_id}.{extension}"
         filepath = f"static/avatars/{filename}"
 
-        # Guardamos el archivo físico en el servidor
         with open(filepath, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        # Actualizamos la base de datos con la nueva ruta
         avatar_url = f"/{filepath}"
         conn = get_db_connection()
         conn.execute("UPDATE users SET profile_pic = ? WHERE id = ?", (avatar_url, user_id))
         conn.commit()
         conn.close()
 
-    # Devolvemos al usuario a su perfil para que vea el cambio
     return RedirectResponse(url="/perfil", status_code=303)
