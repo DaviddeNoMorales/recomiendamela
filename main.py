@@ -1,5 +1,6 @@
 import os
-from fastapi import FastAPI, Request
+import shutil
+from fastapi import FastAPI, Request, File, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -13,6 +14,7 @@ from routes_acciones import router as acciones_router
 
 app = FastAPI()
 
+# Aseguramos que exista la carpeta para guardar los avatares
 os.makedirs("static/avatars", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
@@ -220,9 +222,7 @@ async def perfil(request: Request):
     for fav in favs:
         gen = fav['genre_name']
         if gen not in fav_por_gen: 
-            # Obtenemos las recomendaciones puras desde la API
             lista_recom = obtener_recomendaciones(fav['movie_id'])
-            # Construimos la URL completa de las imágenes para que el HTML pueda leerlas
             if lista_recom:
                 for r in lista_recom:
                     r['poster_url'] = f"https://image.tmdb.org/t/p/w342{r['poster_path']}" if r.get('poster_path') else ""
@@ -242,3 +242,31 @@ async def perfil(request: Request):
             "usuarios": usuarios
         }
     )
+
+# NUEVA RUTA: Recibir y guardar el archivo del avatar
+@app.post("/perfil/avatar", response_class=RedirectResponse)
+async def actualizar_avatar(request: Request, file: UploadFile = File(...)):
+    user_id = request.cookies.get("user_id")
+    if not user_id:
+        return RedirectResponse(url="/", status_code=303)
+
+    # Solo procesamos si es una imagen
+    if file.content_type.startswith("image/"):
+        # Construimos el nombre de archivo único para evitar sobreescrituras de otros usuarios
+        extension = file.filename.split(".")[-1]
+        filename = f"avatar_usuario_{user_id}.{extension}"
+        filepath = f"static/avatars/{filename}"
+
+        # Guardamos el archivo físico en el servidor
+        with open(filepath, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        # Actualizamos la base de datos con la nueva ruta
+        avatar_url = f"/{filepath}"
+        conn = get_db_connection()
+        conn.execute("UPDATE users SET profile_pic = ? WHERE id = ?", (avatar_url, user_id))
+        conn.commit()
+        conn.close()
+
+    # Devolvemos al usuario a su perfil para que vea el cambio
+    return RedirectResponse(url="/perfil", status_code=303)

@@ -25,11 +25,20 @@
 
     <div class="perfil-hero" style="padding: 40px 4%; color: white; background: #181818; border-bottom: 1px solid #222;">
         <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
-            {% if user_avatar %}
-                <img src="{{ user_avatar }}" alt="Avatar" style="width: 100px; height: 100px; border-radius: 50%; border: 3px solid #e50914;">
-            {% else %}
-                <div style="width: 100px; height: 100px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 2rem; border: 3px solid #e50914;">👤</div>
-            {% endif %}
+            
+            <div style="position: relative; display: inline-block;">
+                {% if user_avatar %}
+                    <img src="{{ user_avatar }}" alt="Avatar" style="width: 100px; height: 100px; border-radius: 50%; border: 3px solid #e50914; object-fit: cover;">
+                {% else %}
+                    <div style="width: 100px; height: 100px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 2rem; border: 3px solid #e50914;">👤</div>
+                {% endif %}
+                
+                <form action="/perfil/avatar" method="post" enctype="multipart/form-data" style="position: absolute; bottom: -5px; right: -5px; margin: 0; background: #e50914; border-radius: 50%; padding: 6px; cursor: pointer; border: 2px solid #181818; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                    <label for="avatar-upload" style="cursor: pointer; display: block; width: 20px; height: 20px; text-align: center; line-height: 20px; font-size: 14px;" title="Cambiar avatar">📷</label>
+                    <input type="file" id="avatar-upload" name="file" accept="image/*" style="display: none;" onchange="this.form.submit()">
+                </form>
+            </div>
+
             <div>
                 <h1 style="margin: 0; font-size: 2.5rem;">{{ username }}</h1>
                 {% if is_admin or role == 'admin' %}
@@ -162,7 +171,6 @@
     </div>
 
     <script>
-        // Novedad: Scroll horizontal con la rueda del ratón en la vista del perfil
         document.querySelectorAll('.carrusel-recomendaciones').forEach(carrusel => {
             carrusel.addEventListener('wheel', function(e) {
                 if (e.deltaY !== 0) {
