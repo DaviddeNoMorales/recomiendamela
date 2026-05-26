@@ -176,6 +176,16 @@
                 }
             });
         });
+
+        // Novedad: Scroll horizontal con la rueda del ratón
+        document.querySelectorAll('.carrusel').forEach(carrusel => {
+            carrusel.addEventListener('wheel', function(e) {
+                if (e.deltaY !== 0) {
+                    e.preventDefault();
+                    this.scrollLeft += e.deltaY;
+                }
+            }, { passive: false });
+        });
     </script>
 </body>
 </html>
