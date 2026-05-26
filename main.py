@@ -75,7 +75,7 @@ async def inicio(request: Request, query: str = None, movie_id: int = None):
             if favs:
                 genre_ids = [str(f['genre_id']) for f in favs[:3]]
                 carrusel_pelis = descubrir_por_generos(genre_ids)
-                carrusel_titulo = "Recomendado para ti"
+                carrusel_titulo = "Recommended para ti"
             else:
                 carrusel_pelis = descubrir_por_generos(["27", "14"])
                 carrusel_titulo = "Nuestra selección para empezar"
@@ -125,12 +125,11 @@ async def inicio(request: Request, query: str = None, movie_id: int = None):
                     plat['direct_link'] = obtener_enlace_directo(nombre_base, peli['title'])
                     plataformas.append(plat)
             
-            # --- NUEVO: Generación de enlaces para Podcasts ---
+            # --- CONFIGURACIÓN CORREGIDA: Formatos de búsqueda de Podcasts ---
             titulo_url = urllib.parse.quote(peli['title'])
             podcasts_links = [
-                {"nombre": "Spotify", "link": f"https://open.spotify.com/search/{titulo_url}/podcasts", "color": "#1DB954", "icono": "🎧"},
-                {"nombre": "iVoox", "link": f"https://www.ivoox.com/buscar_{titulo_url}_sw_1_1.html", "color": "#FF6600", "icono": "🎙️"},
-                {"nombre": "Podimo", "link": f"https://www.google.com/search?q=podcast+{titulo_url}+podimo", "color": "#E8004A", "icono": "▶️"} 
+                {"nombre": "Spotify", "link": f"https://open.spotify.com/search/{titulo_url}", "color": "#1DB954", "icono": "🎧"},
+                {"nombre": "iVoox", "link": f"https://www.ivoox.com/{titulo_url}_sb.html?sb={titulo_url}", "color": "#FF6600", "icono": "🎙️"}
             ]
             
             for v in peli.get('videos', {}).get('results', []):
@@ -152,8 +151,8 @@ async def inicio(request: Request, query: str = None, movie_id: int = None):
             "username": username, 
             "user_avatar": user_avatar,
             "peli": peli, 
-            "plataformas": plataformas,
-            "podcasts": podcasts_links, # Pasamos los podcasts al HTML
+            "plataformas": plataformas, 
+            "podcasts": podcasts_links, 
             "trailer": trailer, 
             "error": error, 
             "is_fav": is_fav, 
