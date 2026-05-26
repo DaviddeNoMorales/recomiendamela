@@ -2,18 +2,18 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Buscador de Cine</title>
+    <title>Recomiendame</title>
     <link rel="stylesheet" href="/static/index.css">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 </head>
 <body>
 
     <div class="navbar" {% if resultados_busqueda %}style="background: #000; position: relative;"{% endif %}>
-        <a href="/" class="logo">MOVIESEARCH</a>
+        <a href="/" class="logo">Recomiendame</a>
         
         {% if user_id %}
             <div class="auth-forms-container">
-                <img src="{{ user_avatar }}" class="nav-avatar" alt="Avatar">
+                <img src="{{ user_avatar }}" class="nav-avatar" alt="Avatar" style="width: 30px; border-radius: 50%;">
                 <span style="font-weight: bold; color: #fff;">Hola, {{ username }}</span>
                 <a href="/perfil" class="btn-nav">Perfil</a>
                 <a href="/auth/logout" class="btn-nav btn-danger">Salir</a>
@@ -25,7 +25,7 @@
                     <input type="password" name="password" placeholder="Contraseña" required>
                     <button type="submit" class="btn-primary">Entrar</button>
                 </form>
-                <div class="auth-divider">|</div>
+                <div class="auth-divider" style="color: #555;">|</div>
                 <form action="/auth/register" method="post" class="form-login">
                     <input type="text" name="username" placeholder="Nuevo Usuario" required>
                     <input type="password" name="password" placeholder="Contraseña" required>
@@ -36,22 +36,22 @@
     </div>
 
     {% if error %}
-        <div class="error" style="position: absolute; top: 80px; width: 90%; z-index: 1000; left: 5%;">⚠️ {{ error }}</div>
+        <div class="error" style="position: absolute; top: 80px; width: 90%; z-index: 1000; left: 5%; background: rgba(229, 9, 20, 0.9); color: white; padding: 10px; border-radius: 5px;">⚠️ {{ error }}</div>
     {% endif %}
 
     {% if resultados_busqueda %}
         <div style="padding: 40px 4%;">
-            <form action="/" method="get" class="form-buscar" style="margin-bottom: 40px;">
-                <input type="text" name="query" placeholder="Busca títulos, personajes, géneros..." value="{{ query_actual }}" required>
-                <button type="submit" class="btn-primary">🔍</button>
+            <form action="/" method="get" class="form-buscar" style="margin-bottom: 40px; display: flex; gap: 10px;">
+                <input type="text" name="query" placeholder="Busca títulos, personajes, géneros..." value="{{ query_actual }}" required style="flex: 1; padding: 10px; background: #333; color: white; border: none; border-radius: 4px;">
+                <button type="submit" class="btn-primary" style="padding: 10px 20px;">🔍</button>
             </form>
 
             <h2 style="color: #fff; margin-bottom: 20px; font-size: 24px;">Resultados para "{{ query_actual }}"</h2>
-            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+            <div class="tendencias-container" style="display: flex; gap: 15px; flex-wrap: wrap;">
                 {% for res in resultados_busqueda %}
                     {% if res.poster_url %}
-                    <a href="/?movie_id={{ res.id }}" class="item-carrusel" style="width: 160px; text-decoration: none;">
-                        <img src="{{ res.poster_url }}" alt="{{ res.title }}">
+                    <a href="/?movie_id={{ res.id }}" class="item-carrusel" style="width: 45%; max-width: 160px; text-decoration: none;">
+                        <img src="{{ res.poster_url }}" alt="{{ res.title }}" style="width: 100%; border-radius: 8px;">
                         <p style="color: #fff; text-align: center; margin-top: 10px; font-size: 13px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ res.title }}<br><span style="color: #aaa; font-weight: normal;">{{ res.release_date[:4] if res.release_date else '' }}</span></p>
                     </a>
                     {% endif %}
@@ -65,15 +65,15 @@
         <div class="hero-overlay"></div>
         <div class="hero-content">
             
-            <form action="/" method="get" class="form-buscar">
-                <input type="text" name="query" placeholder="Busca títulos, personajes, géneros..." required>
-                <button type="submit" class="btn-primary">🔍</button>
+            <form action="/" method="get" class="form-buscar" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <input type="text" name="query" placeholder="Busca títulos, personajes, géneros..." required style="flex: 1; padding: 10px; background: rgba(51, 51, 51, 0.8); color: white; border: none; border-radius: 4px;">
+                <button type="submit" class="btn-primary" style="padding: 10px 20px;">🔍</button>
             </form>
 
             <h1>{{ peli.title }}</h1>
             <div class="meta">
-                <span class="nota">{{ peli.vote_average * 10 }}% Coincidencia</span>
-                <span>{{ peli.release_date[:4] if peli.release_date else '' }}</span>
+                <span class="nota" style="color: #46d369; font-weight: bold;">{{ peli.vote_average * 10 }}% Coincidencia</span>
+                <span style="color: #ccc; margin-left: 10px;">{{ peli.release_date[:4] if peli.release_date else '' }}</span>
             </div>
             <p class="sinopsis">{{ peli.overview or "No hay sinopsis disponible." }}</p>
             
@@ -84,7 +84,7 @@
                         <input type="hidden" name="title" value="{{ peli.title }}">
                         <input type="hidden" name="poster_url" value="{{ peli.poster_url }}">
                         <button type="submit" class="btn-icon btn-pen {% if is_pen %}iluminado{% endif %}">
-                            ▶ {% if is_pen %}En Lista{% else %}Ver Después{% endif %}
+                            ▶ {% if is_pen %}Recomendada!{% else %}Me la recomiendas?{% endif %}
                         </button>
                     </form>
 
@@ -97,7 +97,7 @@
                         <input type="hidden" name="genre_id" value="{{ prim_genre.id }}">
                         <input type="hidden" name="genre_name" value="{{ prim_genre.name }}">
                         <button type="submit" class="btn-icon btn-fav {% if is_fav %}iluminado{% endif %}">
-                            ➕ {% if is_fav %}Favorito{% else %}Me Gusta{% endif %}
+                            ➕ Favorito
                         </button>
                     </form>
                     {% endif %}
@@ -108,13 +108,13 @@
                 <a href="/foro/{{ peli.id }}" class="btn-icon" style="background: rgba(30, 30, 30, 0.8); color: #fff; text-decoration: none; border: 1px solid #555;">💬 Ir al Foro</a>
             </div>
 
-            <div class="plataformas-container">
+            <div class="plataformas-container" style="margin-top: 20px;">
                 {% if plataformas %}
                     <h3 style="color: #999; font-size: 14px; margin-bottom: 10px;">Disponible en:</h3>
-                    <div class="iconos-plataformas">
+                    <div class="iconos-plataformas" style="display: flex; gap: 10px;">
                         {% for plat in plataformas %}
                             <a href="{{ plat.direct_link }}" target="_blank" title="Ver en {{ plat.provider_name }}">
-                                <img src="https://image.tmdb.org/t/p/w92{{ plat.logo_path }}" class="icono-plat" alt="{{ plat.provider_name }}">
+                                <img src="https://image.tmdb.org/t/p/w92{{ plat.logo_path }}" class="icono-plat" alt="{{ plat.provider_name }}" style="width: 40px; border-radius: 8px;">
                             </a>
                         {% endfor %}
                     </div>
@@ -126,19 +126,19 @@
     {% endif %}
 
     {% if trailer and busqueda_activa and not resultados_busqueda %}
-        <div class="trailer-container">
-            <iframe src="https://www.youtube.com/embed/{{ trailer }}?autoplay=0&controls=1" allowfullscreen></iframe>
+        <div class="trailer-container" style="padding: 20px 4%; max-width: 1000px; margin: 0 auto;">
+            <iframe src="https://www.youtube.com/embed/{{ trailer }}?autoplay=0&controls=1" allowfullscreen style="width: 100%; aspect-ratio: 16/9; border: none; border-radius: 8px;"></iframe>
         </div>
     {% endif %}
 
     {% if carrusel_pelis and not resultados_busqueda %}
     <div class="seccion-carrusel" {% if not (trailer and busqueda_activa) and not busqueda_activa %}style="margin-top: -80px;"{% endif %}>
-        <h3>{{ carrusel_titulo }}</h3>
-        <div class="carrusel">
+        <h3 style="color: white; padding: 0 4%;">{{ carrusel_titulo }}</h3>
+        <div class="carrusel tendencias-container" style="display: flex; gap: 10px; padding: 10px 4%; overflow-x: auto;">
             {% for cp in carrusel_pelis %}
                 {% if cp.poster_url %}
-                <a href="/?movie_id={{ cp.id }}" class="item-carrusel" title="{{ cp.title }}">
-                    <img src="{{ cp.poster_url }}" alt="{{ cp.title }}">
+                <a href="/?movie_id={{ cp.id }}" class="item-carrusel" title="{{ cp.title }}" style="flex: 0 0 auto; width: 140px;">
+                    <img src="{{ cp.poster_url }}" alt="{{ cp.title }}" style="width: 100%; border-radius: 8px;">
                 </a>
                 {% endif %}
             {% endfor %}
@@ -165,11 +165,11 @@
                     if (actionUrl.includes('/add')) {
                         form.setAttribute('action', actionUrl.replace('/add', '/remove'));
                         btn.classList.add('iluminado');
-                        btn.innerHTML = (type === 'fav') ? '➕ Favorito' : '▶ En Lista';
+                        btn.innerHTML = (type === 'fav') ? '➕ Favorito' : '▶ Recomendada!';
                     } else {
                         form.setAttribute('action', actionUrl.replace('/remove', '/add'));
                         btn.classList.remove('iluminado');
-                        btn.innerHTML = (type === 'fav') ? '➕ Me Gusta' : '▶ Ver Después';
+                        btn.innerHTML = (type === 'fav') ? '➕ Favorito' : '▶ Me la recomiendas?';
                     }
                 } catch (error) {
                     console.error("Error en servidor:", error);

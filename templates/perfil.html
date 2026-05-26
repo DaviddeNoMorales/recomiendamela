@@ -2,106 +2,71 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Mi Perfil</title>
+    <title>Mi Perfil - Recomiendame</title>
+    <link rel="stylesheet" href="/static/index.css">
     <link rel="stylesheet" href="/static/perfil.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 </head>
 <body>
-    <div class="header-nav">
-        <h1>MOVIESEARCH</h1>
-        <a href="/" class="btn-nav">⬅ Volver al Buscador</a>
-    </div>
 
-    <div class="perfil-hero">
-        <img src="{{ user_avatar }}" class="perfil-avatar" alt="Avatar">
-        <div class="perfil-info">
-            <h2>{{ username }}</h2>
-            <form action="/auth/avatar" method="post" enctype="multipart/form-data" class="form-avatar">
-                <input type="file" name="file" accept="image/*" required>
-                <button type="submit">Subir Foto</button>
-            </form>
-        </div>
-    </div>
-
-    {% if is_admin %}
-    <div class="admin-panel">
-        <h2>🛠️ Panel de Control de Usuarios</h2>
-        <p style="font-size: 14px; color: #aaa; margin-bottom: 15px;">Como administrador, puedes registrar nuevas cuentas limitadas para el sistema.</p>
-        <form action="/auth/admin-create" method="post" class="form-user">
-            <input type="text" name="username" placeholder="Nuevo Usuario" required>
-            <input type="password" name="password" placeholder="Contraseña" required>
-            <button type="submit">➕ Crear Usuario</button>
+    <div class="navbar" style="background: #000; position: relative; z-index: 10;">
+        <a href="/" class="logo">Recomiendame</a>
+        
+        <form action="/" method="get" class="form-buscar-perfil">
+            <input type="text" name="query" placeholder="Buscar película..." required>
+            <button type="submit" class="btn-primary">🔍</button>
         </form>
-        <p class="subtitulo-seccion" style="color: #e50914;">USUARIOS ACTIVOS:</p>
-        <ul class="lista-usuarios">
-            {% for u in usuarios %}
-                <li>👤 {{ u.username }}</li>
-            {% endfor %}
-            {% if not usuarios %}<li style="background: transparent; color: #666;">No hay usuarios creados aún.</li>{% endif %}
-        </ul>
-    </div>
-    {% endif %}
 
-    <div class="seccion">
-        <h2>🕒 Tu Lista (Ver Después)</h2>
-        <div class="grid-peliculas">
-            {% for pen in pendientes %}
-                <div class="item-peli">
-                    <a href="/?movie_id={{ pen.movie_id }}">
-                        <img src="{{ pen.poster_url }}" alt="{{ pen.title }}">
-                    </a>
-                    <p>{{ pen.title }}</p>
-                    <form action="/accion/pen/remove" method="post">
-                        <input type="hidden" name="movie_id" value="{{ pen.movie_id }}">
-                        <button type="submit" class="btn-remove">X Quitar de la lista</button>
-                    </form>
-                </div>
-            {% endfor %}
-            {% if not pendientes %}<p style="color: #666; font-size: 14px;">No tienes películas pendientes.</p>{% endif %}
+        <div class="auth-forms-container">
+            <a href="/" class="btn-nav">Inicio</a>
+            <a href="/auth/logout" class="btn-nav btn-danger">Salir</a>
         </div>
     </div>
 
-    <div class="seccion">
-        <h2>💖 Favoritos y Sugerencias</h2>
-        {% for genero, datos in favoritos_por_genero.items() %}
-            <div class="genero-bloque">
-                <h3>📁 Género: {{ genero }}</h3>
-                
-                <p class="subtitulo-seccion">TUS PELÍCULAS:</p>
-                <div class="grid-peliculas">
-                    {% for fav in datos.peliculas %}
-                        <div class="item-peli">
-                            <a href="/?movie_id={{ fav.movie_id }}">
-                                <img src="{{ fav.poster_url }}" alt="{{ fav.title }}">
-                            </a>
-                            <p>{{ fav.title }}</p>
-                            <form action="/accion/fav/remove" method="post">
-                                <input type="hidden" name="movie_id" value="{{ fav.movie_id }}">
-                                <button type="submit" class="btn-remove">X Quitar</button>
-                            </form>
-                        </div>
-                    {% endfor %}
-                </div>
-                
-                <p class="subtitulo-seccion" style="color: #46d369;">✨ PORQUE TE GUSTA EL {{ genero | upper }}, TE RECOMENDAMOS:</p>
-                <div class="grid-peliculas">
-                    {% for rec in datos.recomendaciones %}
-                        <div class="item-peli" style="opacity: 0.8;">
-                            {% if rec.poster_path %}
-                                <a href="/?movie_id={{ rec.id }}" style="text-decoration: none;">
-                                    <img src="https://image.tmdb.org/t/p/w185{{ rec.poster_path }}" alt="{{ rec.title }}">
-                                    <p>{{ rec.title }}</p>
-                                </a>
-                            {% else %}
-                                <div style="width: 100%; height: 270px; background: #111;"></div>
-                                <p>{{ rec.title }}</p>
-                            {% endif %}
-                        </div>
-                    {% endfor %}
-                </div>
+    <div class="perfil-hero" style="padding: 40px 4%; color: white;">
+        <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+            <img src="{{ user_avatar }}" alt="Avatar de {{ username }}" style="width: 100px; height: 100px; border-radius: 50%; border: 3px solid #e50914;">
+            <div>
+                <h1 style="margin: 0; font-size: 2.5rem;">{{ username }}</h1>
+                <p style="color: #aaa; margin: 5px 0 0 0;">Has guardado {{ stats.total_favs }} favoritos y {{ stats.total_pens }} recomendaciones pendientes.</p>
             </div>
-        {% endfor %}
-        {% if not favoritos_por_genero %}<p style="color: #666; font-size: 14px;">No hay películas en tus favoritos aún.</p>{% endif %}
+        </div>
     </div>
+
+    <div style="padding: 20px 4%;">
+        
+        {% if peli_pendientes %}
+        <h2 style="color: white; border-left: 4px solid #28a745; padding-left: 10px; margin-bottom: 20px;">Recomendadas (Ver después)</h2>
+        <div class="grid-peliculas" style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 40px;">
+            {% for p in peli_pendientes %}
+            <a href="/?movie_id={{ p.movie_id }}" class="item-peli" style="width: 45%; max-width: 160px; text-decoration: none;">
+                <img src="{{ p.poster_url }}" alt="{{ p.title }}" style="width: 100%; border-radius: 8px;">
+                <p style="color: white; font-size: 13px; text-align: center; margin-top: 8px;">{{ p.title }}</p>
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if peli_favoritas %}
+        <h2 style="color: white; border-left: 4px solid #e50914; padding-left: 10px; margin-bottom: 20px;">Mis Favoritas</h2>
+        <div class="grid-peliculas" style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 40px;">
+            {% for p in peli_favoritas %}
+            <a href="/?movie_id={{ p.movie_id }}" class="item-peli" style="width: 45%; max-width: 160px; text-decoration: none;">
+                <img src="{{ p.poster_url }}" alt="{{ p.title }}" style="width: 100%; border-radius: 8px;">
+                <p style="color: white; font-size: 13px; text-align: center; margin-top: 8px;">{{ p.title }}</p>
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if not peli_pendientes and not peli_favoritas %}
+        <div style="text-align: center; padding: 50px; color: #666;">
+            <h2>Aún no has guardado nada</h2>
+            <p>Busca películas en el inicio y añádelas a tus listas.</p>
+        </div>
+        {% endif %}
+
+    </div>
+
 </body>
 </html>
