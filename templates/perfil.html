@@ -10,7 +10,7 @@
 <body>
 
     <div class="navbar" style="background: #000; position: relative; z-index: 10;">
-        <a href="/" class="logo">Recomiendame</a>
+        <a href="/" class="logo">Recomiendamela</a>
         
         <form action="/" method="get" class="form-buscar-perfil">
             <input type="text" name="query" placeholder="Buscar película..." required>
@@ -87,9 +87,7 @@
         </div>
         {% endif %}
 
-
         {% set mis_pendientes = peli_pendientes or pendientes or lista_pendientes or watchlist %}
-        
         <h2 style="color: white; border-left: 4px solid #28a745; padding-left: 10px; margin-bottom: 20px; font-size: 22px;">Recomendadas</h2>
         
         {% if mis_pendientes %}
@@ -106,7 +104,6 @@
             <p>No tienes ninguna recomendación marcada como pendiente.</p>
         </div>
         {% endif %}
-
 
         <h2 style="color: white; border-left: 4px solid #e50914; padding-left: 10px; margin-bottom: 20px; font-size: 22px;">Mis Favoritas</h2>
 
@@ -137,7 +134,7 @@
                         <div class="carrusel-recomendaciones" style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px;">
                             {% for r in recom_del_genero %}
                             <a href="/?movie_id={{ r.movie_id or r.id }}" style="flex: 0 0 auto; width: 110px; text-decoration: none; display: block;">
-                                <img src="{{ r.poster_url }}" alt="{{ r.title }}" style="width: 100%; border-radius: 6px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                                <img src="{{ r.poster_url }}" alt="{{ r.title }}" style="width: 100%; border-radius: 6px;">
                                 <p style="color: #888; font-size: 11px; text-align: center; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ r.title }}</p>
                             </a>
                             {% endfor %}
