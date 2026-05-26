@@ -1,3 +1,30 @@
+/* Reseteo básico para evitar desbordes */
+* {
+    box-sizing: border-box;
+    max-width: 100%;
+}
+
+/* Forzar que el navbar se apile en pantallas pequeñas */
+@media (max-width: 600px) {
+    .navbar {
+        display: flex;
+        flex-direction: column;
+        height: auto !important;
+        padding: 10px !important;
+    }
+    .auth-forms-container {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+    }
+    .auth-divider { display: none; } /* Quitamos el "|" en móvil */
+    .form-login {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+}
 body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #141414; color: #e5e5e5; margin: 0; padding: 0; overflow-x: hidden; }
 
 /* NAVBAR ESTILO NETFLIX */
@@ -78,6 +105,42 @@ body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-c
 .error { color: #e50914; text-align: center; background: rgba(20,20,20,0.9); padding: 15px; margin: 20px 4%; border-radius: 4px; border: 1px solid #e50914; }
 /* --- DISEÑO RESPONSIVE --- */
 
+@media (max-width: 768px) {
+    .hero-content h1 { 
+        font-size: 1.5rem !important; 
+        line-height: 1.2; 
+    }
+    .hero-content p { 
+        font-size: 0.9rem !important; 
+        padding: 0 15px; 
+    }
+}
+@media (max-width: 768px) {
+    .tendencias-container { 
+        display: flex; 
+        flex-wrap: wrap; /* Esto es la clave: hace que salten a la siguiente línea */
+        justify-content: center; 
+        gap: 10px;
+    }
+    
+    .item-tendencia { 
+        width: 45% !important; /* Dos películas por fila en móviles */
+    }
+}
+@media (max-width: 768px) {
+    /* Convertir el navbar en columna */
+    .navbar { 
+        flex-direction: column !important; 
+        align-items: center; 
+        gap: 15px; 
+    }
+    
+    /* Que los inputs del login sean más pequeños */
+    .navbar input { 
+        width: 90% !important; 
+        margin: 5px 0; 
+    }
+}
 /* Ajustes para Tablets y Móviles (Pantallas menores a 900px) */
 @media (max-width: 900px) {
     .hero-content h1 { font-size: 2.5rem; }
@@ -85,6 +148,7 @@ body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-c
     .carrusel { padding: 10px 0; }
     .navbar { padding: 15px 2%; }
 }
+
 
 /* Ajustes específicos para Móviles (Pantallas menores a 600px) */
 @media (max-width: 600px) {
@@ -100,4 +164,31 @@ body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-c
     .item-carrusel img { height: 210px; }
     
     .navbar { flex-direction: column; gap: 10px; background: #000; position: relative; }
+}
+/* Corrección para dispositivos móviles */
+@media (max-width: 600px) {
+    /* 1. Forzar que nada se desborde */
+    html, body {
+        width: 100%;
+        overflow-x: hidden; /* Esto quita la barra de scroll horizontal molesta */
+    }
+
+    /* 2. Asegurar que los contenedores se adapten */
+    .hero-banner, .navbar, .trailer-container, .seccion-carrusel, .foro-container {
+        width: 100% !important;
+        box-sizing: border-box;
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+
+    /* 3. Ajustar el tráiler para que no rompa el diseño */
+    .trailer-container iframe {
+        width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 16/9;
+    }
+
+    /* 4. Ajustar el tamaño de fuente para que no sea gigante */
+    h1 { font-size: 1.8rem !important; }
+    .sinopsis { font-size: 1rem !important; }
 }
