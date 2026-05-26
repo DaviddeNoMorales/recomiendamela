@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mi Perfil</title>
+    <link rel="stylesheet" href="/static/perfil.css">
+</head>
+<body>
+    <div class="header-nav">
+        <h1>MOVIESEARCH</h1>
+        <a href="/" class="btn-nav">⬅ Volver al Buscador</a>
+    </div>
+
+    <div class="perfil-hero">
+        <img src="{{ user_avatar }}" class="perfil-avatar" alt="Avatar">
+        <div class="perfil-info">
+            <h2>{{ username }}</h2>
+            <form action="/auth/avatar" method="post" enctype="multipart/form-data" class="form-avatar">
+                <input type="file" name="file" accept="image/*" required>
+                <button type="submit">Subir Foto</button>
+            </form>
+        </div>
+    </div>
+
+    {% if is_admin %}
+    <div class="admin-panel">
+        <h2>🛠️ Panel de Control de Usuarios</h2>
+        <p style="font-size: 14px; color: #aaa; margin-bottom: 15px;">Como administrador, puedes registrar nuevas cuentas limitadas para el sistema.</p>
+        <form action="/auth/admin-create" method="post" class="form-user">
+            <input type="text" name="username" placeholder="Nuevo Usuario" required>
+            <input type="password" name="password" placeholder="Contraseña" required>
+            <button type="submit">➕ Crear Usuario</button>
+        </form>
+        <p class="subtitulo-seccion" style="color: #e50914;">USUARIOS ACTIVOS:</p>
+        <ul class="lista-usuarios">
+            {% for u in usuarios %}
+                <li>👤 {{ u.username }}</li>
+            {% endfor %}
+            {% if not usuarios %}<li style="background: transparent; color: #666;">No hay usuarios creados aún.</li>{% endif %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="seccion">
+        <h2>🕒 Tu Lista (Ver Después)</h2>
+        <div class="grid-peliculas">
+            {% for pen in pendientes %}
+                <div class="item-peli">
+                    <a href="/?movie_id={{ pen.movie_id }}">
+                        <img src="{{ pen.poster_url }}" alt="{{ pen.title }}">
+                    </a>
+                    <p>{{ pen.title }}</p>
+                    <form action="/accion/pen/remove" method="post">
+                        <input type="hidden" name="movie_id" value="{{ pen.movie_id }}">
+                        <button type="submit" class="btn-remove">X Quitar de la lista</button>
+                    </form>
+                </div>
+            {% endfor %}
+            {% if not pendientes %}<p style="color: #666; font-size: 14px;">No tienes películas pendientes.</p>{% endif %}
+        </div>
+    </div>
+
+    <div class="seccion">
+        <h2>💖 Favoritos y Sugerencias</h2>
+        {% for genero, datos in favoritos_por_genero.items() %}
+            <div class="genero-bloque">
+                <h3>📁 Género: {{ genero }}</h3>
+                
+                <p class="subtitulo-seccion">TUS PELÍCULAS:</p>
+                <div class="grid-peliculas">
+                    {% for fav in datos.peliculas %}
+                        <div class="item-peli">
+                            <a href="/?movie_id={{ fav.movie_id }}">
+                                <img src="{{ fav.poster_url }}" alt="{{ fav.title }}">
+                            </a>
+                            <p>{{ fav.title }}</p>
+                            <form action="/accion/fav/remove" method="post">
+                                <input type="hidden" name="movie_id" value="{{ fav.movie_id }}">
+                                <button type="submit" class="btn-remove">X Quitar</button>
+                            </form>
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                <p class="subtitulo-seccion" style="color: #46d369;">✨ PORQUE TE GUSTA EL {{ genero | upper }}, TE RECOMENDAMOS:</p>
+                <div class="grid-peliculas">
+                    {% for rec in datos.recomendaciones %}
+                        <div class="item-peli" style="opacity: 0.8;">
+                            {% if rec.poster_path %}
+                                <a href="/?movie_id={{ rec.id }}" style="text-decoration: none;">
+                                    <img src="https://image.tmdb.org/t/p/w185{{ rec.poster_path }}" alt="{{ rec.title }}">
+                                    <p>{{ rec.title }}</p>
+                                </a>
+                            {% else %}
+                                <div style="width: 100%; height: 270px; background: #111;"></div>
+                                <p>{{ rec.title }}</p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+        {% if not favoritos_por_genero %}<p style="color: #666; font-size: 14px;">No hay películas en tus favoritos aún.</p>{% endif %}
+    </div>
+</body>
+</html>

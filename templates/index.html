@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Buscador de Cine</title>
+    <link rel="stylesheet" href="/static/index.css">
+</head>
+<body>
+
+    <div class="navbar" {% if resultados_busqueda %}style="background: #000; position: relative;"{% endif %}>
+        <a href="/" class="logo">MOVIESEARCH</a>
+        
+        {% if user_id %}
+            <div class="auth-forms-container">
+                <img src="{{ user_avatar }}" class="nav-avatar" alt="Avatar">
+                <span style="font-weight: bold; color: #fff;">Hola, {{ username }}</span>
+                <a href="/perfil" class="btn-nav">Perfil</a>
+                <a href="/auth/logout" class="btn-nav btn-danger">Salir</a>
+            </div>
+        {% else %}
+            <div class="auth-forms-container">
+                <form action="/auth/login" method="post" class="form-login">
+                    <input type="text" name="username" placeholder="Usuario" required>
+                    <input type="password" name="password" placeholder="Contraseña" required>
+                    <button type="submit" class="btn-primary">Entrar</button>
+                </form>
+                <div class="auth-divider">|</div>
+                <form action="/auth/register" method="post" class="form-login">
+                    <input type="text" name="username" placeholder="Nuevo Usuario" required>
+                    <input type="password" name="password" placeholder="Contraseña" required>
+                    <button type="submit" class="btn-primary" style="background: transparent; border: 1px solid #e50914;">Registro</button>
+                </form>
+            </div>
+        {% endif %}
+    </div>
+
+    {% if error %}
+        <div class="error" style="position: absolute; top: 80px; width: 90%; z-index: 1000; left: 5%;">⚠️ {{ error }}</div>
+    {% endif %}
+
+    {% if resultados_busqueda %}
+        <div style="padding: 40px 4%;">
+            <form action="/" method="get" class="form-buscar" style="margin-bottom: 40px;">
+                <input type="text" name="query" placeholder="Busca títulos, personajes, géneros..." value="{{ query_actual }}" required>
+                <button type="submit" class="btn-primary">🔍</button>
+            </form>
+
+            <h2 style="color: #fff; margin-bottom: 20px; font-size: 24px;">Resultados para "{{ query_actual }}"</h2>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                {% for res in resultados_busqueda %}
+                    {% if res.poster_url %}
+                    <a href="/?movie_id={{ res.id }}" class="item-carrusel" style="width: 160px; text-decoration: none;">
+                        <img src="{{ res.poster_url }}" alt="{{ res.title }}">
+                        <p style="color: #fff; text-align: center; margin-top: 10px; font-size: 13px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ res.title }}<br><span style="color: #aaa; font-weight: normal;">{{ res.release_date[:4] if res.release_date else '' }}</span></p>
+                    </a>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    {% if peli and not resultados_busqueda %}
+    <div class="hero-banner" style="background-image: url('{{ peli.backdrop_url or peli.poster_url }}');" id="hero">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            
+            <form action="/" method="get" class="form-buscar">
+                <input type="text" name="query" placeholder="Busca títulos, personajes, géneros..." required>
+                <button type="submit" class="btn-primary">🔍</button>
+            </form>
+
+            <h1>{{ peli.title }}</h1>
+            <div class="meta">
+                <span class="nota">{{ peli.vote_average * 10 }}% Coincidencia</span>
+                <span>{{ peli.release_date[:4] if peli.release_date else '' }}</span>
+            </div>
+            <p class="sinopsis">{{ peli.overview or "No hay sinopsis disponible." }}</p>
+            
+            <div class="acciones">
+                {% if user_id %}
+                    <form action="{% if is_pen %}/accion/pen/remove{% else %}/accion/pen/add{% endif %}" method="post" class="form-accion" data-type="pen" style="margin: 0;">
+                        <input type="hidden" name="movie_id" value="{{ peli.id }}">
+                        <input type="hidden" name="title" value="{{ peli.title }}">
+                        <input type="hidden" name="poster_url" value="{{ peli.poster_url }}">
+                        <button type="submit" class="btn-icon btn-pen {% if is_pen %}iluminado{% endif %}">
+                            ▶ {% if is_pen %}En Lista{% else %}Ver Después{% endif %}
+                        </button>
+                    </form>
+
+                    {% set prim_genre = peli.genres[0] if peli.genres else None %}
+                    {% if prim_genre %}
+                    <form action="{% if is_fav %}/accion/fav/remove{% else %}/accion/fav/add{% endif %}" method="post" class="form-accion" data-type="fav" style="margin: 0;">
+                        <input type="hidden" name="movie_id" value="{{ peli.id }}">
+                        <input type="hidden" name="title" value="{{ peli.title }}">
+                        <input type="hidden" name="poster_url" value="{{ peli.poster_url }}">
+                        <input type="hidden" name="genre_id" value="{{ prim_genre.id }}">
+                        <input type="hidden" name="genre_name" value="{{ prim_genre.name }}">
+                        <button type="submit" class="btn-icon btn-fav {% if is_fav %}iluminado{% endif %}">
+                            ➕ {% if is_fav %}Favorito{% else %}Me Gusta{% endif %}
+                        </button>
+                    </form>
+                    {% endif %}
+                {% else %}
+                    <p style="color: #e5e5e5; font-size: 14px; margin-right: 15px;">🔒 Inicia sesión para guardar.</p>
+                {% endif %}
+
+                <a href="/foro/{{ peli.id }}" class="btn-icon" style="background: rgba(30, 30, 30, 0.8); color: #fff; text-decoration: none; border: 1px solid #555;">💬 Ir al Foro</a>
+            </div>
+
+            <div class="plataformas-container">
+                {% if plataformas %}
+                    <h3 style="color: #999; font-size: 14px; margin-bottom: 10px;">Disponible en:</h3>
+                    <div class="iconos-plataformas">
+                        {% for plat in plataformas %}
+                            <a href="{{ plat.direct_link }}" target="_blank" title="Ver en {{ plat.provider_name }}">
+                                <img src="https://image.tmdb.org/t/p/w92{{ plat.logo_path }}" class="icono-plat" alt="{{ plat.provider_name }}">
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+    {% endif %}
+
+    {% if trailer and busqueda_activa and not resultados_busqueda %}
+        <div class="trailer-container">
+            <iframe src="https://www.youtube.com/embed/{{ trailer }}?autoplay=0&controls=1" allowfullscreen></iframe>
+        </div>
+    {% endif %}
+
+    {% if carrusel_pelis and not resultados_busqueda %}
+    <div class="seccion-carrusel" {% if not (trailer and busqueda_activa) and not busqueda_activa %}style="margin-top: -80px;"{% endif %}>
+        <h3>{{ carrusel_titulo }}</h3>
+        <div class="carrusel">
+            {% for cp in carrusel_pelis %}
+                {% if cp.poster_url %}
+                <a href="/?movie_id={{ cp.id }}" class="item-carrusel" title="{{ cp.title }}">
+                    <img src="{{ cp.poster_url }}" alt="{{ cp.title }}">
+                </a>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <script>
+        {% if busqueda_activa and not resultados_busqueda %}
+            window.onload = function() {
+                document.getElementById("hero").scrollIntoView({ behavior: 'smooth' });
+            };
+        {% endif %}
+
+        document.querySelectorAll('.form-accion').forEach(form => {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault(); 
+                const formData = new FormData(form);
+                const actionUrl = form.getAttribute('action');
+                const btn = form.querySelector('button');
+                const type = form.getAttribute('data-type'); 
+                try {
+                    await fetch(actionUrl, { method: 'POST', body: formData });
+                    if (actionUrl.includes('/add')) {
+                        form.setAttribute('action', actionUrl.replace('/add', '/remove'));
+                        btn.classList.add('iluminado');
+                        btn.innerHTML = (type === 'fav') ? '➕ Favorito' : '▶ En Lista';
+                    } else {
+                        form.setAttribute('action', actionUrl.replace('/remove', '/add'));
+                        btn.classList.remove('iluminado');
+                        btn.innerHTML = (type === 'fav') ? '➕ Me Gusta' : '▶ Ver Después';
+                    }
+                } catch (error) {
+                    console.error("Error en servidor:", error);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

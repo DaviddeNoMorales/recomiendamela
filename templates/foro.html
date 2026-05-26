@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Foro - {{ peli.title }}</title>
+    <link rel="stylesheet" href="/static/index.css">
+    <style>
+        .foro-hero { position: relative; height: 40vh; background-size: cover; background-position: center; display: flex; align-items: flex-end; padding: 40px 4%; box-shadow: inset 0 -150px 100px -50px #141414; margin-bottom: 30px; }
+        .foro-hero h1 { position: relative; z-index: 2; font-size: 3rem; margin: 0; color: #fff; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); }
+    </style>
+</head>
+<body>
+
+    <div class="navbar" style="background: #000; position: relative;">
+        <a href="/" class="logo">MOVIESEARCH</a>
+        <a href="/?movie_id={{ peli.id }}" class="btn-nav" style="background: transparent; border: 1px solid #fff;">⬅ Volver a la Película</a>
+        
+        {% if user_id %}
+            <div class="auth-forms-container">
+                <img src="{{ user_avatar }}" class="nav-avatar" alt="Avatar">
+                <span style="font-weight: bold; color: #fff;">Hola, {{ username }}</span>
+                <a href="/perfil" class="btn-nav">Perfil</a>
+            </div>
+        {% else %}
+            <div class="auth-forms-container">
+                <p style="color: #999; margin: 0; font-size: 14px;">Inicia sesión en la página principal para participar</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="foro-hero" style="background-image: url('{{ peli.backdrop_url }}');">
+        <div class="hero-overlay"></div>
+        <h1>Foro Oficial: {{ peli.title }}</h1>
+    </div>
+
+    <div class="foro-container">
+        <h2 class="foro-header">💬 Sala de Debate</h2>
+        
+        {% if user_id %}
+        <form action="/accion/comentar" method="post" class="form-comentario">
+            <input type="hidden" name="movie_id" value="{{ peli.id }}">
+            <img src="{{ user_avatar }}" alt="Tu Avatar">
+            <textarea name="comentario" placeholder="¿Qué te ha parecido la película? Escribe tu opinión, teorías, dudas..." required></textarea>
+            <button type="submit" class="btn-primary" style="height: fit-content; align-self: flex-end;">Publicar</button>
+        </form>
+        {% else %}
+        <div class="bloqueo-foro">
+            <h4>🔒 Solo para miembros</h4>
+            <p style="color: #aaa;">Debes iniciar sesión para poder publicar tus opiniones en esta sala.</p>
+        </div>
+        {% endif %}
+
+        <div class="foro-lista">
+            {% for c in comentarios %}
+                <div class="comentario-item">
+                    <img src="{{ c.avatar }}" alt="Avatar">
+                    <div class="comentario-cuerpo">
+                        <h4>{{ c.username }} <span>{{ c.fecha }}</span></h4>
+                        <p>{{ c.comentario }}</p>
+                    </div>
+                </div>
+            {% endfor %}
+            {% if not comentarios %}
+                <p style="color: #666; font-style: italic; font-size: 18px; text-align: center; margin-top: 40px;">Esta sala está vacía. ¡Rompe el hielo y sé el primero en opinar!</p>
+            {% endif %}
+        </div>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,41 @@
+body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #141414; color: #e5e5e5; margin: 0; padding: 0; overflow-x: hidden; }
+
+.header-nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 4%; background: #000; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+.header-nav h1 { color: #e50914; margin: 0; font-size: 24px; font-weight: bold; }
+.btn-nav { text-decoration: none; padding: 8px 15px; background: rgba(109, 109, 110, 0.7); color: #fff; border-radius: 4px; font-weight: bold; transition: 0.2s; }
+.btn-nav:hover { background: rgba(109, 109, 110, 0.9); }
+
+/* Perfil Cabecera */
+.perfil-hero { display: flex; align-items: center; gap: 30px; padding: 50px 4%; background: linear-gradient(to bottom, #222, #141414); border-bottom: 1px solid #333; }
+.perfil-avatar { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 4px solid #e50914; box-shadow: 0 0 20px rgba(229, 9, 20, 0.3); }
+.perfil-info h2 { font-size: 3rem; margin: 0 0 10px 0; color: #fff; }
+.form-avatar { display: flex; gap: 10px; align-items: center; margin-top: 15px; }
+.form-avatar input[type="file"] { font-size: 14px; color: #999; }
+.form-avatar button { background: #fff; color: #141414; font-weight: bold; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; transition: 0.2s; }
+.form-avatar button:hover { background: #ccc; }
+
+.seccion { padding: 30px 4%; margin-bottom: 20px; }
+.seccion h2 { color: #fff; font-size: 24px; margin-bottom: 20px; border-left: 5px solid #e50914; padding-left: 15px; line-height: 1; }
+
+.grid-peliculas { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px; }
+.item-peli { width: 180px; background: transparent; border-radius: 4px; text-align: center; position: relative; transition: transform 0.3s ease; }
+.item-peli img { width: 100%; height: 270px; object-fit: cover; border-radius: 4px; box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
+.item-peli p { margin: 10px 0; color: #fff; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; font-weight: bold; font-size: 14px; }
+.item-peli:hover { transform: scale(1.05); z-index: 10; }
+
+.btn-remove { background: rgba(229, 9, 20, 0.8); border: none; color: white; padding: 8px; width: 100%; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold; transition: 0.2s; margin-top: 5px; }
+.btn-remove:hover { background: #e50914; }
+
+.genero-bloque { margin-bottom: 40px; background: rgba(255,255,255,0.03); padding: 25px; border-radius: 8px; }
+.genero-bloque h3 { color: #999; font-size: 18px; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+.subtitulo-seccion { font-size: 14px; color: #aaa; margin-bottom: 10px; margin-top: 25px; font-weight: bold; }
+
+.admin-panel { background: rgba(229, 9, 20, 0.05); border: 1px solid rgba(229, 9, 20, 0.3); border-radius: 8px; padding: 25px 4%; margin: 20px 4%; }
+.admin-panel h2 { color: #e50914; border-left: none; padding-left: 0; }
+.form-user { display: flex; gap: 10px; margin-bottom: 20px; }
+.form-user input { padding: 10px 15px; border-radius: 4px; border: 1px solid #555; background: rgba(0,0,0,0.7); color: white; outline: none; }
+.form-user input:focus { border-color: #e50914; }
+.form-user button { background: #e50914; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+.form-user button:hover { background: #f40612; }
+.lista-usuarios { list-style: none; padding: 0; display: flex; gap: 10px; flex-wrap: wrap; }
+.lista-usuarios li { background: #333; padding: 8px 18px; border-radius: 20px; font-size: 14px; font-weight: bold; }
