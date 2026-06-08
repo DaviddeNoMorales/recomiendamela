@@ -25,7 +25,7 @@ inicializar_db()
 app.include_router(auth_router)
 app.include_router(acciones_router)
 
-# --- NUEVO: SISTEMA DE AUTENTICACIÓN Y BÚSQUEDA IGDB (TWITCH) ---
+# --- SISTEMA DE AUTENTICACIÓN Y BÚSQUEDA IGDB (TWITCH) ---
 IGDB_TOKEN = None
 IGDB_TOKEN_EXPIRY = 0
 
@@ -41,7 +41,6 @@ def get_igdb_token():
     try:
         r = requests.post(url).json()
         IGDB_TOKEN = r.get('access_token')
-        # Guardamos el token y lo hacemos caducar 60 segundos antes por seguridad
         IGDB_TOKEN_EXPIRY = time.time() + r.get('expires_in', 3600) - 60
         return IGDB_TOKEN
     except Exception as e:
@@ -58,7 +57,6 @@ def buscar_videojuegos(query: str):
         'Client-ID': client_id,
         'Authorization': f'Bearer {token}'
     }
-    # Sintaxis de Apicalypse para buscar títulos en IGDB
     body = f'search "{query}"; fields name,cover.url,first_release_date; limit 10;'
     try:
         r = requests.post("https://api.igdb.com/v4/games", headers=headers, data=body).json()
@@ -70,7 +68,6 @@ def buscar_videojuegos(query: str):
                     game['title'] = game.get('name')
                     if 'first_release_date' in game:
                         game['release_date'] = datetime.datetime.fromtimestamp(game['first_release_date']).strftime('%Y')
-                    # Transformamos la miniatura a carátula grande
                     game['poster_url'] = "https:" + game['cover']['url'].replace('t_thumb', 't_cover_big')
                     juegos.append(game)
         return juegos
@@ -95,7 +92,6 @@ def obtener_detalles_videojuego(game_id: int):
             game = r[0]
             game['title'] = game.get('name')
             game['overview'] = game.get('summary', 'No hay sinopsis disponible para este juego.')
-            # IGDB puntúa de 0 a 100, lo normalizamos de 0 a 10
             game['vote_average'] = round(game.get('rating', 0) / 10, 1) if 'rating' in game else 0
             game['fuente_nota'] = 'IGDB'
             if 'first_release_date' in game:
@@ -107,7 +103,6 @@ def obtener_detalles_videojuego(game_id: int):
             else:
                 game['backdrop_url'] = game.get('poster_url')
             
-            # Extraemos la lista de consolas limpias
             game['plataformas_nombres'] = [p['name'] for p in game.get('platforms', [])]
             game['media_type'] = 'game'
             return game
@@ -116,7 +111,7 @@ def obtener_detalles_videojuego(game_id: int):
         print("Error obteniendo detalles del videojuego:", e)
         return None
 
-# --- FUNCIONES DE TMDB (CINE Y SERIES) EXISTENTES ---
+# --- FUNCIONES DE CINE Y SERIES (TMDB / IMDb) ---
 def obtener_nota_imdb(imdb_id: str):
     if not imdb_id:
         return None
@@ -193,7 +188,6 @@ async def inicio(request: Request, query: str = None, movie_id: int = None, medi
     carrusel_titulo = ""
     carrusel_pelis = []
     
-    # Listas de búsqueda separadas
     resultados_busqueda_cine = []
     resultados_busqueda_juegos = []
     modo_busqueda = False
@@ -213,12 +207,10 @@ async def inicio(request: Request, query: str = None, movie_id: int = None, medi
 
     if query:
         modo_busqueda = True
-        # Buscamos en TMDB
         resultados_busqueda_cine = buscar_multimedia(query)
         for res in resultados_busqueda_cine:
             res['poster_url'] = f"https://image.tmdb.org/t/p/w342{res['poster_path']}" if res.get('poster_path') else ""
         
-        # Buscamos en IGDB (Juegos)
         resultados_busqueda_juegos = buscar_videojuegos(query)
 
         if not resultados_busqueda_cine and not resultados_busqueda_juegos:
@@ -248,7 +240,6 @@ async def inicio(request: Request, query: str = None, movie_id: int = None, medi
             mid = random.choice(carrusel_pelis[:5])['id']
             media_type = "movie"
 
-    # Procesamiento del elemento activo
     if mid and not modo_busqueda:
         if media_type == "game":
             peli = obtener_detalles_videojuego(mid)
@@ -257,12 +248,11 @@ async def inicio(request: Request, query: str = None, movie_id: int = None, medi
             
             if peli:
                 titulo_url = urllib.parse.quote(peli['title'])
-                # Enlaces de streaming dinámicos para Twitch y YouTube
+                # CORRECCIÓN: Botón de YouTube configurado en Rojo (#FF0000)
                 podcasts_links = [
                     {"nombre": "Directos en Twitch", "link": f"https://www.twitch.tv/directory/search?term={titulo_url}", "color": "#9146FF", "icono": "🟪"},
-                    {"nombre": "Gameplays y Podcasts", "link": f"https://www.youtube.com/results?search_query={titulo_url}+gameplay+podcast", "color": "#FF0000", "icono": "▶️"}
+                    {"nombre": "YouTube", "link": f"https://www.youtube.com/results?search_query={titulo_url}+gameplay+podcast", "color": "#FF0000", "icono": "▶️"}
                 ]
-
         else:
             if media_type == "tv":
                 peli = obtener_detalles_tv(mid)
@@ -325,7 +315,6 @@ async def inicio(request: Request, query: str = None, movie_id: int = None, medi
                         trailer = v['key']
                         break
 
-        # Comprobación general en la BD para el estado de botones
         if peli and user_id:
             conn = get_db_connection()
             is_fav = bool(conn.execute("SELECT id FROM favoritos WHERE user_id=? AND movie_id=?", (user_id, mid)).fetchone())

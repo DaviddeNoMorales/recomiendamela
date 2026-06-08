@@ -153,11 +153,32 @@ body {
     color: white !important;
 }
 
-/* =========================================
-   SISTEMA DE MENÚS (ESCRITORIO VS MÓVIL) 
-   ========================================= */
+/* BOTONES PREMIUM DE REPRODUCCIÓN MULTIMEDIA (Twitch, YouTube, Spotify...) */
+.btn-plat {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px !important;
+    border-radius: 20px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 14px;
+    transition: transform 0.2s, opacity 0.2s;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
 
-/* Por defecto (Ordenador): Mostramos el normal, ocultamos el móvil */
+.btn-plat:hover {
+    transform: translateY(-2px);
+    opacity: 0.9;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.btn-plat:active {
+    transform: translateY(0);
+}
+
+/* SISTEMA DE VISIBILIDAD (ESCRITORIO VS MÓVIL) */
 .desktop-auth {
     display: flex !important;
 }
@@ -166,7 +187,7 @@ body {
     display: none !important;
 }
 
-/* Estilos de Menú Desplegable (Solo se verán en móvil) */
+/* Desplegables en móvil */
 .dropdown {
     position: relative;
 }
@@ -203,7 +224,7 @@ body {
     width: 100%;
 }
 
-/* MEDIA QUERIES PARA MÓVILES */
+/* REGLAS RESPONSIVE PARA DISPOSITIVOS MÓVILES */
 @media (max-width: 768px) {
     .navbar {
         flex-direction: column;
@@ -214,7 +235,6 @@ body {
         gap: 15px;
     }
     
-    /* En móvil: Ocultamos el de ordenador, mostramos los desplegables */
     .desktop-auth {
         display: none !important;
     }
