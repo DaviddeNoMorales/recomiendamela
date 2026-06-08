@@ -153,11 +153,11 @@ async def inicio(request: Request, query: str = None, movie_id: int = None, medi
             peli['poster_url'] = f"https://image.tmdb.org/t/p/w500{peli['poster_path']}" if peli.get('poster_path') else None
             peli['backdrop_url'] = f"https://image.tmdb.org/t/p/original{peli['backdrop_path']}" if peli.get('backdrop_path') else None
 
-            if movie_id:
-                for cp in carrusel_pelis:
-                    cp['poster_url'] = f"https://image.tmdb.org/t/p/w342{cp['poster_path']}" if cp.get('poster_path') else ""
-                    if 'media_type' not in cp:
-                        cp['media_type'] = media_type
+            # CORRECCIÓN: El bucle ahora se ejecuta siempre para construir las imágenes del carrusel por defecto
+            for cp in carrusel_pelis:
+                cp['poster_url'] = f"https://image.tmdb.org/t/p/w342{cp['poster_path']}" if cp.get('poster_path') else ""
+                if 'media_type' not in cp:
+                    cp['media_type'] = media_type
                 
             watch_data = peli.get('watch/providers', {}).get('results', {}).get('ES', {})
             plataformas_crudas = watch_data.get('flatrate', [])
