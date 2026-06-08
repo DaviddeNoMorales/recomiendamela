@@ -1,6 +1,7 @@
 import os
 import shutil
 import requests
+import re
 from fastapi import FastAPI, Request, File, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -23,13 +24,29 @@ inicializar_db()
 app.include_router(auth_router)
 app.include_router(acciones_router)
 
+def obtener_nota_imdb(imdb_id: str):
+    if not imdb_id:
+        return None
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+        url = f"https://www.imdb.com/title/{imdb_id}/"
+        r = requests.get(url, headers=headers, timeout=5)
+        # Buscamos la nota dentro del bloque de datos estructurados de IMDb
+        match = re.search(r'"ratingValue":\s*"?([0-9.]+)"?', r.text)
+        if match:
+            return float(match.group(1))
+    except Exception as e:
+        print(f"Error al extraer la nota de IMDb para {imdb_id}:", e)
+    return None
+
 def buscar_multimedia(query: str):
     api_key = os.getenv('API_KEY')
     url = f"https://api.themoviedb.org/3/search/multi?api_key={api_key}&query={urllib.parse.quote(query)}&language=es-ES"
     try:
         r = requests.get(url).json()
         results = r.get('results', [])
-        # Filtramos para quedarnos únicamente con películas y series de televisión
         filtrados = [res for res in results if res.get('media_type') in ['movie', 'tv']]
         return filtrados
     except Exception as e:
@@ -38,13 +55,14 @@ def buscar_multimedia(query: str):
 
 def obtener_detalles_tv(tv_id: int):
     api_key = os.getenv('API_KEY')
-    url = f"https://api.themoviedb.org/3/tv/{tv_id}?api_key={api_key}&language=es-ES&append_to_response=videos,watch/providers"
+    # Añadimos external_ids para poder obtener el código de IMDb de la serie
+    url = f"https://api.themoviedb.org/3/tv/{tv_id}?api_key={api_key}&language=es-ES&append_to_response=videos,watch/providers,external_ids"
     try:
         res = requests.get(url).json()
         if 'id' in res:
-            # Mapeo de compatibilidad con la plantilla existente de películas
             res['title'] = res.get('name')
             res['release_date'] = res.get('first_air_date')
+            res['imdb_id'] = res.get('external_ids', {}).get('imdb_id')
             return res
         return None
     except Exception as e:
@@ -92,7 +110,6 @@ async def inicio(request: Request, query: str = None, movie_id: int = None, medi
     user_avatar = None
     mid = movie_id
 
-    # 1. Obtener Avatar del usuario
     if user_id:
         conn = get_db_connection()
         usr = conn.execute("SELECT profile_pic FROM users WHERE id = ?", (user_id,)).fetchone()
@@ -102,15 +119,13 @@ async def inicio(request: Request, query: str = None, movie_id: int = None, medi
         else:
             user_avatar = f"https://ui-avatars.com/api/?name={username}&background=e50914&color=fff&rounded=true"
 
-    # 2. Búsqueda unificada multiformato (Películas y Series)
     if query:
         resultados_busqueda = buscar_multimedia(query)
         for res in resultados_busqueda:
             res['poster_url'] = f"https://image.tmdb.org/t/p/w342{res['poster_path']}" if res.get('poster_path') else ""
         if not resultados_busqueda:
-            error = True # Modificado para activar el bloque gigante de error en HTML
+            error = True
 
-    # 3. Carga por defecto si no hay búsquedas o selección activa
     elif not mid:
         if user_id:
             conn = get_db_connection()
@@ -135,7 +150,6 @@ async def inicio(request: Request, query: str = None, movie_id: int = None, medi
             mid = random.choice(carrusel_pelis[:5])['id']
             media_type = "movie"
 
-    # 4. Procesamiento de la ficha técnica activa (Película o Serie de TV)
     if mid and not resultados_busqueda:
         if media_type == "tv":
             peli = obtener_detalles_tv(mid)
@@ -149,9 +163,15 @@ async def inicio(request: Request, query: str = None, movie_id: int = None, medi
                 carrusel_titulo = f"Películas similares a {peli.get('title')}"
 
         if peli:
-            peli['vote_average'] = round(peli.get('vote_average', 0), 1)
             peli['poster_url'] = f"https://image.tmdb.org/t/p/w500{peli['poster_path']}" if peli.get('poster_path') else None
             peli['backdrop_url'] = f"https://image.tmdb.org/t/p/original{peli['backdrop_path']}" if peli.get('backdrop_path') else None
+
+            # INTERCEPTOR: Extraemos la nota real de IMDb si el ID existe
+            nota_real_imdb = obtener_nota_imdb(peli.get('imdb_id'))
+            if nota_real_imdb:
+                peli['vote_average'] = nota_real_imdb
+            else:
+                peli['vote_average'] = round(peli.get('vote_average', 0), 1)
 
             for cp in carrusel_pelis:
                 cp['poster_url'] = f"https://image.tmdb.org/t/p/w342{cp['poster_path']}" if cp.get('poster_path') else ""
