@@ -2,6 +2,8 @@ import os
 import shutil
 import requests
 import re
+import time
+import datetime
 from fastapi import FastAPI, Request, File, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -16,7 +18,6 @@ from routes_acciones import router as acciones_router
 
 app = FastAPI()
 
-# Aseguramos que exista la carpeta para guardar los avatares
 os.makedirs("static/avatars", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
@@ -24,16 +25,105 @@ inicializar_db()
 app.include_router(auth_router)
 app.include_router(acciones_router)
 
+# --- NUEVO: SISTEMA DE AUTENTICACIÓN Y BÚSQUEDA IGDB (TWITCH) ---
+IGDB_TOKEN = None
+IGDB_TOKEN_EXPIRY = 0
+
+def get_igdb_token():
+    global IGDB_TOKEN, IGDB_TOKEN_EXPIRY
+    if time.time() < IGDB_TOKEN_EXPIRY and IGDB_TOKEN:
+        return IGDB_TOKEN
+    client_id = os.getenv('IGDB_CLIENT_ID')
+    client_secret = os.getenv('IGDB_CLIENT_SECRET')
+    if not client_id or not client_secret:
+        return None
+    url = f"https://id.twitch.tv/oauth2/token?client_id={client_id}&client_secret={client_secret}&grant_type=client_credentials"
+    try:
+        r = requests.post(url).json()
+        IGDB_TOKEN = r.get('access_token')
+        # Guardamos el token y lo hacemos caducar 60 segundos antes por seguridad
+        IGDB_TOKEN_EXPIRY = time.time() + r.get('expires_in', 3600) - 60
+        return IGDB_TOKEN
+    except Exception as e:
+        print("Error al obtener token de IGDB:", e)
+        return None
+
+def buscar_videojuegos(query: str):
+    token = get_igdb_token()
+    client_id = os.getenv('IGDB_CLIENT_ID')
+    if not token or not client_id: 
+        return []
+    
+    headers = {
+        'Client-ID': client_id,
+        'Authorization': f'Bearer {token}'
+    }
+    # Sintaxis de Apicalypse para buscar títulos en IGDB
+    body = f'search "{query}"; fields name,cover.url,first_release_date; limit 10;'
+    try:
+        r = requests.post("https://api.igdb.com/v4/games", headers=headers, data=body).json()
+        juegos = []
+        if isinstance(r, list):
+            for game in r:
+                if 'cover' in game and 'url' in game['cover']:
+                    game['media_type'] = 'game'
+                    game['title'] = game.get('name')
+                    if 'first_release_date' in game:
+                        game['release_date'] = datetime.datetime.fromtimestamp(game['first_release_date']).strftime('%Y')
+                    # Transformamos la miniatura a carátula grande
+                    game['poster_url'] = "https:" + game['cover']['url'].replace('t_thumb', 't_cover_big')
+                    juegos.append(game)
+        return juegos
+    except Exception as e:
+        print("Error buscando videojuegos:", e)
+        return []
+
+def obtener_detalles_videojuego(game_id: int):
+    token = get_igdb_token()
+    client_id = os.getenv('IGDB_CLIENT_ID')
+    if not token or not client_id: 
+        return None
+    
+    headers = {
+        'Client-ID': client_id,
+        'Authorization': f'Bearer {token}'
+    }
+    body = f'fields name,summary,cover.url,artworks.url,first_release_date,rating,platforms.name; where id = {game_id};'
+    try:
+        r = requests.post("https://api.igdb.com/v4/games", headers=headers, data=body).json()
+        if r and isinstance(r, list):
+            game = r[0]
+            game['title'] = game.get('name')
+            game['overview'] = game.get('summary', 'No hay sinopsis disponible para este juego.')
+            # IGDB puntúa de 0 a 100, lo normalizamos de 0 a 10
+            game['vote_average'] = round(game.get('rating', 0) / 10, 1) if 'rating' in game else 0
+            game['fuente_nota'] = 'IGDB'
+            if 'first_release_date' in game:
+                game['release_date'] = datetime.datetime.fromtimestamp(game['first_release_date']).strftime('%Y')
+            if 'cover' in game and 'url' in game['cover']:
+                game['poster_url'] = "https:" + game['cover']['url'].replace('t_thumb', 't_1080p')
+            if 'artworks' in game and game['artworks']:
+                game['backdrop_url'] = "https:" + game['artworks'][0]['url'].replace('t_thumb', 't_1080p')
+            else:
+                game['backdrop_url'] = game.get('poster_url')
+            
+            # Extraemos la lista de consolas limpias
+            game['plataformas_nombres'] = [p['name'] for p in game.get('platforms', [])]
+            game['media_type'] = 'game'
+            return game
+        return None
+    except Exception as e:
+        print("Error obteniendo detalles del videojuego:", e)
+        return None
+
+# --- FUNCIONES DE TMDB (CINE Y SERIES) EXISTENTES ---
 def obtener_nota_imdb(imdb_id: str):
     if not imdb_id:
         return None
     try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        }
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
         url = f"https://www.imdb.com/title/{imdb_id}/"
         r = requests.get(url, headers=headers, timeout=5)
-        # Buscamos la nota dentro del bloque de datos estructurados de IMDb
         match = re.search(r'"ratingValue":\s*"?([0-9.]+)"?', r.text)
         if match:
             return float(match.group(1))
@@ -55,7 +145,6 @@ def buscar_multimedia(query: str):
 
 def obtener_detalles_tv(tv_id: int):
     api_key = os.getenv('API_KEY')
-    # Añadimos external_ids para poder obtener el código de IMDb de la serie
     url = f"https://api.themoviedb.org/3/tv/{tv_id}?api_key={api_key}&language=es-ES&append_to_response=videos,watch/providers,external_ids"
     try:
         res = requests.get(url).json()
@@ -66,7 +155,6 @@ def obtener_detalles_tv(tv_id: int):
             return res
         return None
     except Exception as e:
-        print("Error obteniendo detalles de la serie:", e)
         return None
 
 def obtener_similares_tv(tv_id: int):
@@ -81,7 +169,6 @@ def obtener_similares_tv(tv_id: int):
             r['media_type'] = 'tv'
         return results
     except Exception as e:
-        print("Error obteniendo series similares:", e)
         return []
 
 def obtener_enlace_directo(plataforma, titulo):
@@ -105,7 +192,12 @@ async def inicio(request: Request, query: str = None, movie_id: int = None, medi
     peli, error, plataformas, trailer, is_fav, is_pen = None, False, [], None, False, False
     carrusel_titulo = ""
     carrusel_pelis = []
-    resultados_busqueda = []
+    
+    # Listas de búsqueda separadas
+    resultados_busqueda_cine = []
+    resultados_busqueda_juegos = []
+    modo_busqueda = False
+    
     podcasts_links = []
     user_avatar = None
     mid = movie_id
@@ -120,10 +212,16 @@ async def inicio(request: Request, query: str = None, movie_id: int = None, medi
             user_avatar = f"https://ui-avatars.com/api/?name={username}&background=e50914&color=fff&rounded=true"
 
     if query:
-        resultados_busqueda = buscar_multimedia(query)
-        for res in resultados_busqueda:
+        modo_busqueda = True
+        # Buscamos en TMDB
+        resultados_busqueda_cine = buscar_multimedia(query)
+        for res in resultados_busqueda_cine:
             res['poster_url'] = f"https://image.tmdb.org/t/p/w342{res['poster_path']}" if res.get('poster_path') else ""
-        if not resultados_busqueda:
+        
+        # Buscamos en IGDB (Juegos)
+        resultados_busqueda_juegos = buscar_videojuegos(query)
+
+        if not resultados_busqueda_cine and not resultados_busqueda_juegos:
             error = True
 
     elif not mid:
@@ -150,73 +248,89 @@ async def inicio(request: Request, query: str = None, movie_id: int = None, medi
             mid = random.choice(carrusel_pelis[:5])['id']
             media_type = "movie"
 
-    if mid and not resultados_busqueda:
-        if media_type == "tv":
-            peli = obtener_detalles_tv(mid)
-            if peli and movie_id:
-                carrusel_pelis = obtener_similares_tv(mid)
-                carrusel_titulo = f"Series similares a {peli.get('title')}"
+    # Procesamiento del elemento activo
+    if mid and not modo_busqueda:
+        if media_type == "game":
+            peli = obtener_detalles_videojuego(mid)
+            carrusel_pelis = [] 
+            carrusel_titulo = ""
+            
+            if peli:
+                titulo_url = urllib.parse.quote(peli['title'])
+                # Enlaces de streaming dinámicos para Twitch y YouTube
+                podcasts_links = [
+                    {"nombre": "Directos en Twitch", "link": f"https://www.twitch.tv/directory/search?term={titulo_url}", "color": "#9146FF", "icono": "🟪"},
+                    {"nombre": "Gameplays y Podcasts", "link": f"https://www.youtube.com/results?search_query={titulo_url}+gameplay+podcast", "color": "#FF0000", "icono": "▶️"}
+                ]
+
         else:
-            peli = obtener_detalles_pelicula(mid)
-            if peli and movie_id:
-                carrusel_pelis = obtener_similares(mid)
-                carrusel_titulo = f"Películas similares a {peli.get('title')}"
-
-        if peli:
-            peli['poster_url'] = f"https://image.tmdb.org/t/p/w500{peli['poster_path']}" if peli.get('poster_path') else None
-            peli['backdrop_url'] = f"https://image.tmdb.org/t/p/original{peli['backdrop_path']}" if peli.get('backdrop_path') else None
-
-            # INTERCEPTOR: Extraemos la nota real de IMDb si el ID existe
-            nota_real_imdb = obtener_nota_imdb(peli.get('imdb_id'))
-            if nota_real_imdb:
-                peli['vote_average'] = nota_real_imdb
+            if media_type == "tv":
+                peli = obtener_detalles_tv(mid)
+                if peli and movie_id:
+                    carrusel_pelis = obtener_similares_tv(mid)
+                    carrusel_titulo = f"Series similares a {peli.get('title')}"
             else:
-                peli['vote_average'] = round(peli.get('vote_average', 0), 1)
+                peli = obtener_detalles_pelicula(mid)
+                if peli and movie_id:
+                    carrusel_pelis = obtener_similares(mid)
+                    carrusel_titulo = f"Películas similares a {peli.get('title')}"
 
-            for cp in carrusel_pelis:
-                cp['poster_url'] = f"https://image.tmdb.org/t/p/w342{cp['poster_path']}" if cp.get('poster_path') else ""
-                if 'media_type' not in cp:
-                    cp['media_type'] = media_type
-                
-            watch_data = peli.get('watch/providers', {}).get('results', {}).get('ES', {})
-            plataformas_crudas = watch_data.get('flatrate', [])
-            plataformas_vistas = set()
-            
-            for plat in plataformas_crudas:
-                nombre = plat['provider_name']
-                if "Netflix" in nombre: nombre_base = "Netflix"
-                elif "Prime Video" in nombre or "Amazon" in nombre: nombre_base = "Amazon Prime Video"
-                elif "Disney" in nombre: nombre_base = "Disney+"
-                elif "Max" in nombre or "HBO" in nombre: nombre_base = "Max"
-                elif "Movistar" in nombre: nombre_base = "Movistar Plus+"
-                elif "Apple" in nombre: nombre_base = "Apple TV Plus"
-                elif "Filmin" in nombre: nombre_base = "Filmin"
-                elif "Crunchyroll" in nombre: nombre_base = "Crunchyroll"
-                elif "SkyShowtime" in nombre: nombre_base = "SkyShowtime"
-                else: nombre_base = nombre.split(' with ')[0].split(' con ')[0]
-                
-                if nombre_base not in plataformas_vistas:
-                    plataformas_vistas.add(nombre_base)
-                    plat['provider_name'] = nombre_base 
-                    plat['direct_link'] = obtener_enlace_directo(nombre_base, peli['title'])
-                    plataformas.append(plat)
-            
-            titulo_url = urllib.parse.quote(peli['title'])
-            podcasts_links = [
-                {"nombre": "Spotify", "link": f"https://open.spotify.com/search/{titulo_url}", "color": "#1DB954", "icono": "🎧"},
-                {"nombre": "iVoox", "link": f"https://www.ivoox.com/{titulo_url}_sb.html?sb={titulo_url}", "color": "#FF6600", "icono": "🎙️"}
-            ]
-            
-            for v in peli.get('videos', {}).get('results', []):
-                if v['type'] == 'Trailer': 
-                    trailer = v['key']
-                    break
+            if peli:
+                peli['poster_url'] = f"https://image.tmdb.org/t/p/w500{peli['poster_path']}" if peli.get('poster_path') else None
+                peli['backdrop_url'] = f"https://image.tmdb.org/t/p/original{peli['backdrop_path']}" if peli.get('backdrop_path') else None
+                peli['fuente_nota'] = 'IMDb'
+
+                nota_real_imdb = obtener_nota_imdb(peli.get('imdb_id'))
+                if nota_real_imdb:
+                    peli['vote_average'] = nota_real_imdb
+                else:
+                    peli['vote_average'] = round(peli.get('vote_average', 0), 1)
+
+                for cp in carrusel_pelis:
+                    cp['poster_url'] = f"https://image.tmdb.org/t/p/w342{cp['poster_path']}" if cp.get('poster_path') else ""
+                    if 'media_type' not in cp:
+                        cp['media_type'] = media_type
                     
-            if user_id:
-                conn = get_db_connection()
-                is_fav = bool(conn.execute("SELECT id FROM favoritos WHERE user_id=? AND movie_id=?", (user_id, mid)).fetchone())
-                is_pen = bool(conn.execute("SELECT id FROM pendientes WHERE user_id=? AND movie_id=?", (user_id, mid)).fetchone())
-                conn.close()
+                watch_data = peli.get('watch/providers', {}).get('results', {}).get('ES', {})
+                plataformas_crudas = watch_data.get('flatrate', [])
+                plataformas_vistas = set()
+                
+                for plat in plataformas_crudas:
+                    nombre = plat['provider_name']
+                    if "Netflix" in nombre: nombre_base = "Netflix"
+                    elif "Prime Video" in nombre or "Amazon" in nombre: nombre_base = "Amazon Prime Video"
+                    elif "Disney" in nombre: nombre_base = "Disney+"
+                    elif "Max" in nombre or "HBO" in nombre: nombre_base = "Max"
+                    elif "Movistar" in nombre: nombre_base = "Movistar Plus+"
+                    elif "Apple" in nombre: nombre_base = "Apple TV Plus"
+                    elif "Filmin" in nombre: nombre_base = "Filmin"
+                    elif "Crunchyroll" in nombre: nombre_base = "Crunchyroll"
+                    elif "SkyShowtime" in nombre: nombre_base = "SkyShowtime"
+                    else: nombre_base = nombre.split(' with ')[0].split(' con ')[0]
+                    
+                    if nombre_base not in plataformas_vistas:
+                        plataformas_vistas.add(nombre_base)
+                        plat['provider_name'] = nombre_base 
+                        plat['direct_link'] = obtener_enlace_directo(nombre_base, peli['title'])
+                        plataformas.append(plat)
+                
+                titulo_url = urllib.parse.quote(peli['title'])
+                podcasts_links = [
+                    {"nombre": "Spotify", "link": f"https://open.spotify.com/search/{titulo_url}", "color": "#1DB954", "icono": "🎧"},
+                    {"nombre": "iVoox", "link": f"https://www.ivoox.com/{titulo_url}_sb.html?sb={titulo_url}", "color": "#FF6600", "icono": "🎙️"}
+                ]
+                
+                for v in peli.get('videos', {}).get('results', []):
+                    if v['type'] == 'Trailer': 
+                        trailer = v['key']
+                        break
+
+        # Comprobación general en la BD para el estado de botones
+        if peli and user_id:
+            conn = get_db_connection()
+            is_fav = bool(conn.execute("SELECT id FROM favoritos WHERE user_id=? AND movie_id=?", (user_id, mid)).fetchone())
+            is_pen = bool(conn.execute("SELECT id FROM pendientes WHERE user_id=? AND movie_id=?", (user_id, mid)).fetchone())
+            conn.close()
             
     return templates.TemplateResponse(
         request=request,
@@ -234,7 +348,9 @@ async def inicio(request: Request, query: str = None, movie_id: int = None, medi
             "is_pen": is_pen,
             "carrusel_titulo": carrusel_titulo,
             "carrusel_pelis": carrusel_pelis,
-            "resultados_busqueda": resultados_busqueda,
+            "resultados_busqueda_cine": resultados_busqueda_cine,
+            "resultados_busqueda_juegos": resultados_busqueda_juegos,
+            "modo_busqueda": modo_busqueda,
             "query_actual": query,
             "media_type": media_type,
             "busqueda_activa": bool(movie_id)
