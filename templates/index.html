@@ -233,16 +233,14 @@
             }, { passive: false });
         });
 
-        // Lógica para desplegables en móvil
         function toggleDrop(e, id) {
-            e.stopPropagation(); // Evita que se cierre instantáneamente
+            e.stopPropagation(); 
             document.querySelectorAll('.dropdown-content').forEach(d => {
                 if(d.id !== id) d.classList.remove('show');
             });
             document.getElementById(id).classList.toggle('show');
         }
 
-        // Cierra los menús si haces clic fuera de ellos
         window.addEventListener('click', function() {
             document.querySelectorAll('.dropdown-content').forEach(d => {
                 d.classList.remove('show');

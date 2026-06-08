@@ -72,7 +72,7 @@ body {
     color: #e50914;
 }
 
-/* DEGRADADO DEL HERO BANNER PARA FUSIONAR EL CORTE */
+/* DEGRADADO DEL HERO BANNER PARA FUSIONAR EL CORTE PERFECTAMENTE */
 .hero-banner {
     position: relative;
     height: 80vh;
@@ -85,10 +85,11 @@ body {
 .hero-overlay {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
-    /* Unificamos degradado horizontal para texto y degradado vertical hacia #141414 (color del fondo) */
     background: 
-        linear-gradient(to right, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.8) 100%),
-        linear-gradient(to bottom, rgba(20,20,20,0) 60%, #141414 100%);
+        /* Degradado vertical: Transparente arriba, color de fondo exacto (#141414) abajo */
+        linear-gradient(to bottom, rgba(20,20,20,0) 40%, rgba(20,20,20,1) 100%),
+        /* Degradado horizontal: Oscuro a los lados para que el texto se lea bien */
+        linear-gradient(to right, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.8) 100%);
 }
 
 .hero-content {
@@ -140,26 +141,32 @@ body {
     background: rgba(109, 109, 110, 0.9);
 }
 
-/* Color verde para "Recomendada!" */
 .btn-pen.iluminado {
     background-color: #28a745 !important;
     border-color: #28a745 !important;
     color: white !important;
 }
 
-/* Color rojo para "Favorito" */
 .btn-fav.iluminado {
     background-color: #e50914 !important;
     border-color: #e50914 !important;
     color: white !important;
 }
 
-/* OCULTAMOS LOS MENÚS MÓVILES EN ORDENADOR POR DEFECTO */
+/* =========================================
+   SISTEMA DE MENÚS (ESCRITORIO VS MÓVIL) 
+   ========================================= */
+
+/* Por defecto (Ordenador): Mostramos el normal, ocultamos el móvil */
+.desktop-auth {
+    display: flex !important;
+}
+
 .mobile-auth {
     display: none !important;
 }
 
-/* Estilos de Menú Desplegable */
+/* Estilos de Menú Desplegable (Solo se verán en móvil) */
 .dropdown {
     position: relative;
 }
@@ -198,7 +205,6 @@ body {
 
 /* MEDIA QUERIES PARA MÓVILES */
 @media (max-width: 768px) {
-    /* Navbar móvil */
     .navbar {
         flex-direction: column;
         align-items: center;
@@ -208,7 +214,7 @@ body {
         gap: 15px;
     }
     
-    /* CAMBIO CLAVE: Esconder escritorio, mostrar versión móvil */
+    /* En móvil: Ocultamos el de ordenador, mostramos los desplegables */
     .desktop-auth {
         display: none !important;
     }
@@ -220,14 +226,12 @@ body {
         margin-top: 5px;
     }
 
-    /* Buscador Perfil en móvil */
     .form-buscar-perfil {
         margin: 10px 0;
         width: 100%;
         max-width: 100%;
     }
     
-    /* Hero Banner en móvil */
     .hero-banner {
         height: auto;
         min-height: 80vh;
@@ -249,17 +253,15 @@ body {
         justify-content: center;
     }
 
-    /* Carrusel y Tendencias en móvil */
     .tendencias-container {
         justify-content: center;
     }
     
     .item-carrusel, .item-peli {
-        width: 45% !important; /* Fuerza 2 columnas en móvil */
+        width: 45% !important;
         max-width: 180px;
     }
 
-    /* Ajuste de iframe de Youtube */
     .trailer-container iframe {
         height: auto !important;
         aspect-ratio: 16/9;
