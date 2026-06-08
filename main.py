@@ -25,7 +25,61 @@ inicializar_db()
 app.include_router(auth_router)
 app.include_router(acciones_router)
 
-# --- SISTEMA DE AUTENTICACIÓN Y BÚSQUEDA IGDB (TWITCH) ---
+# --- FASE 3: FUNCIONES DE GOOGLE BOOKS (LIBROS Y CÓMICS) ---
+def buscar_libros(query: str):
+    url = f"https://www.googleapis.com/books/v1/volumes?q={urllib.parse.quote(query)}&maxResults=10&langRestrict=es"
+    try:
+        r = requests.get(url).json()
+        items = r.get('items', [])
+        libros = []
+        for item in items:
+            info = item.get('volumeInfo', {})
+            if 'imageLinks' in info and 'thumbnail' in info['imageLinks']:
+                # Forzamos HTTPS para evitar bloqueos de seguridad en el navegador
+                poster = info['imageLinks']['thumbnail'].replace('http:', 'https:')
+                libros.append({
+                    'id': item['id'],
+                    'title': info.get('title', 'Sin título'),
+                    'release_date': info.get('publishedDate', '')[:4],
+                    'poster_url': poster,
+                    'media_type': 'book'
+                })
+        return libros
+    except Exception as e:
+        print("Error buscando libros:", e)
+        return []
+
+def obtener_detalles_libro(book_id: str):
+    url = f"https://www.googleapis.com/books/v1/volumes/{book_id}"
+    try:
+        r = requests.get(url).json()
+        if 'volumeInfo' in r:
+            info = r['volumeInfo']
+            libro = {
+                'id': r['id'],
+                'title': info.get('title', 'Sin título'),
+                'overview': info.get('description', 'No hay sinopsis disponible para este libro.'),
+                # Google Books puntúa sobre 5, multiplicamos por 2 para mantener la nota sobre 10
+                'vote_average': info.get('averageRating', 0) * 2,
+                'fuente_nota': 'Google Books',
+                'release_date': info.get('publishedDate', '')[:4],
+                'media_type': 'book',
+            }
+            if 'imageLinks' in info and 'thumbnail' in info['imageLinks']:
+                img_url = info['imageLinks']['thumbnail'].replace('http:', 'https:').replace('&edge=curl', '')
+                libro['poster_url'] = img_url
+                libro['backdrop_url'] = img_url
+            else:
+                libro['poster_url'] = None
+                libro['backdrop_url'] = None
+            return libro
+        return None
+    except Exception as e:
+        print("Error obteniendo detalles del libro:", e)
+        return None
+
+
+# --- FASE 2: FUNCIONES IGDB (VIDEOJUEGOS) ---
 IGDB_TOKEN = None
 IGDB_TOKEN_EXPIRY = 0
 
@@ -75,7 +129,7 @@ def buscar_videojuegos(query: str):
         print("Error buscando videojuegos:", e)
         return []
 
-def obtener_detalles_videojuego(game_id: int):
+def obtener_detalles_videojuego(game_id: str):
     token = get_igdb_token()
     client_id = os.getenv('IGDB_CLIENT_ID')
     if not token or not client_id: 
@@ -111,7 +165,7 @@ def obtener_detalles_videojuego(game_id: int):
         print("Error obteniendo detalles del videojuego:", e)
         return None
 
-# --- FUNCIONES DE CINE Y SERIES (TMDB / IMDb) ---
+# --- FASE 1: FUNCIONES TMDB/IMDb (CINE Y SERIES) ---
 def obtener_nota_imdb(imdb_id: str):
     if not imdb_id:
         return None
@@ -138,7 +192,7 @@ def buscar_multimedia(query: str):
         print("Error en búsqueda múltiple:", e)
         return []
 
-def obtener_detalles_tv(tv_id: int):
+def obtener_detalles_tv(tv_id: str):
     api_key = os.getenv('API_KEY')
     url = f"https://api.themoviedb.org/3/tv/{tv_id}?api_key={api_key}&language=es-ES&append_to_response=videos,watch/providers,external_ids"
     try:
@@ -152,7 +206,7 @@ def obtener_detalles_tv(tv_id: int):
     except Exception as e:
         return None
 
-def obtener_similares_tv(tv_id: int):
+def obtener_similares_tv(tv_id: str):
     api_key = os.getenv('API_KEY')
     url = f"https://api.themoviedb.org/3/tv/{tv_id}/similar?api_key={api_key}&language=es-ES"
     try:
@@ -180,8 +234,10 @@ def obtener_enlace_directo(plataforma, titulo):
     }
     return links.get(plataforma, f"https://www.justwatch.com/es/busqueda?q={q}")
 
+# --- RUTAS DE LA APLICACIÓN ---
 @app.get("/", response_class=HTMLResponse)
-async def inicio(request: Request, query: str = None, movie_id: int = None, media_type: str = "movie"):
+# CAMBIO CLAVE: movie_id ahora es un string (str) para poder aceptar IDs de Google Books ("zyTCAlFPjgYC")
+async def inicio(request: Request, query: str = None, movie_id: str = None, media_type: str = "movie"):
     user_id = request.cookies.get("user_id")
     username = request.cookies.get("username")
     peli, error, plataformas, trailer, is_fav, is_pen = None, False, [], None, False, False
@@ -190,6 +246,7 @@ async def inicio(request: Request, query: str = None, movie_id: int = None, medi
     
     resultados_busqueda_cine = []
     resultados_busqueda_juegos = []
+    resultados_busqueda_libros = []
     modo_busqueda = False
     
     podcasts_links = []
@@ -207,13 +264,19 @@ async def inicio(request: Request, query: str = None, movie_id: int = None, medi
 
     if query:
         modo_busqueda = True
+        
+        # 1. Buscamos Películas/Series
         resultados_busqueda_cine = buscar_multimedia(query)
         for res in resultados_busqueda_cine:
             res['poster_url'] = f"https://image.tmdb.org/t/p/w342{res['poster_path']}" if res.get('poster_path') else ""
         
+        # 2. Buscamos Videojuegos
         resultados_busqueda_juegos = buscar_videojuegos(query)
+        
+        # 3. Buscamos Libros/Cómics
+        resultados_busqueda_libros = buscar_libros(query)
 
-        if not resultados_busqueda_cine and not resultados_busqueda_juegos:
+        if not resultados_busqueda_cine and not resultados_busqueda_juegos and not resultados_busqueda_libros:
             error = True
 
     elif not mid:
@@ -237,9 +300,10 @@ async def inicio(request: Request, query: str = None, movie_id: int = None, medi
                 cp['media_type'] = 'movie'
 
         if carrusel_pelis:
-            mid = random.choice(carrusel_pelis[:5])['id']
+            mid = str(random.choice(carrusel_pelis[:5])['id'])
             media_type = "movie"
 
+    # Procesamiento del elemento activo según su tipo
     if mid and not modo_busqueda:
         if media_type == "game":
             peli = obtener_detalles_videojuego(mid)
@@ -248,11 +312,25 @@ async def inicio(request: Request, query: str = None, movie_id: int = None, medi
             
             if peli:
                 titulo_url = urllib.parse.quote(peli['title'])
-                # CORRECCIÓN: Botón de YouTube configurado en Rojo (#FF0000)
                 podcasts_links = [
                     {"nombre": "Directos en Twitch", "link": f"https://www.twitch.tv/directory/search?term={titulo_url}", "color": "#9146FF", "icono": "🟪"},
                     {"nombre": "YouTube", "link": f"https://www.youtube.com/results?search_query={titulo_url}+gameplay+podcast", "color": "#FF0000", "icono": "▶️"}
                 ]
+                
+        elif media_type == "book":
+            peli = obtener_detalles_libro(mid)
+            carrusel_pelis = [] 
+            carrusel_titulo = ""
+            
+            if peli:
+                titulo_url = urllib.parse.quote(peli['title'])
+                # Enlaces dinámicos de tiendas para los libros
+                podcasts_links = [
+                    {"nombre": "Comprar en Amazon", "link": f"https://www.amazon.es/s?k={titulo_url}+libro", "color": "#232F3E", "icono": "🛒"},
+                    {"nombre": "Casa del Libro", "link": f"https://www.casadellibro.com/?q={titulo_url}", "color": "#009966", "icono": "📖"},
+                    {"nombre": "Norma Cómics", "link": f"https://www.normacomics.com/catalogsearch/result/?q={titulo_url}", "color": "#E50914", "icono": "📚"}
+                ]
+                
         else:
             if media_type == "tv":
                 peli = obtener_detalles_tv(mid)
@@ -315,6 +393,7 @@ async def inicio(request: Request, query: str = None, movie_id: int = None, medi
                         trailer = v['key']
                         break
 
+        # Estado en BD de la película/juego/libro
         if peli and user_id:
             conn = get_db_connection()
             is_fav = bool(conn.execute("SELECT id FROM favoritos WHERE user_id=? AND movie_id=?", (user_id, mid)).fetchone())
@@ -339,6 +418,7 @@ async def inicio(request: Request, query: str = None, movie_id: int = None, medi
             "carrusel_pelis": carrusel_pelis,
             "resultados_busqueda_cine": resultados_busqueda_cine,
             "resultados_busqueda_juegos": resultados_busqueda_juegos,
+            "resultados_busqueda_libros": resultados_busqueda_libros,
             "modo_busqueda": modo_busqueda,
             "query_actual": query,
             "media_type": media_type,
@@ -347,7 +427,8 @@ async def inicio(request: Request, query: str = None, movie_id: int = None, medi
     )
 
 @app.get("/foro/{movie_id}", response_class=HTMLResponse)
-async def foro_pelicula(request: Request, movie_id: int):
+# También modificado a string para dar soporte al foro de los libros
+async def foro_pelicula(request: Request, movie_id: str):
     user_id = request.cookies.get("user_id")
     username = request.cookies.get("username")
     user_avatar = None

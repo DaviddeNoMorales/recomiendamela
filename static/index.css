@@ -23,6 +23,7 @@
     --accent:      #e50914;
     --accent-glow: rgba(229, 9, 20, 0.35);
     --accent-game: #9146ff;
+    --accent-book: #009966; /* NUEVO COLOR PARA LIBROS */
     --gold:        #f5c518;
     --text:        #f0f0f0;
     --text-muted:  #888;
@@ -467,6 +468,7 @@ body {
     font-size: 0.9rem;
 }
 
+/* ETIQUETAS Y BADGES PARA EL HERO */
 .badge-tipo {
     padding: 3px 9px;
     border-radius: var(--radius-sm);
@@ -479,6 +481,8 @@ body {
 .badge-movie  { background: rgba(229,9,20,0.15);  color: #ff6b75; border: 1px solid rgba(229,9,20,0.3); }
 .badge-tv     { background: rgba(229,9,20,0.15);  color: #ff6b75; border: 1px solid rgba(229,9,20,0.3); }
 .badge-game   { background: rgba(145,70,255,0.15); color: #b97aff; border: 1px solid rgba(145,70,255,0.3); }
+/* NUEVA ETIQUETA LIBROS Y CÓMICS */
+.badge-book   { background: rgba(0,153,102,0.15);  color: #33cc99; border: 1px solid rgba(0,153,102,0.3); }
 
 /* Synopsis */
 .sinopsis {
@@ -596,6 +600,8 @@ body {
 
 .categoria-bar.cine { background: var(--accent); }
 .categoria-bar.games { background: var(--accent-game); }
+/* NUEVA BARRA LIBROS */
+.categoria-bar.books { background: var(--accent-book); }
 
 .categoria-titulo {
     font-size: 1.1rem;
