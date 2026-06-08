@@ -8,6 +8,7 @@
 </head>
 <body>
 
+    <!-- ══════════════════════ NAVBAR ══════════════════════ -->
     <div class="navbar" id="navbar" {% if modo_busqueda or error %}style="background: rgba(13,13,15,0.98); position: relative; border-bottom: 1px solid var(--border);"{% endif %}>
 
         <a href="/" class="logo">Recomiendamela</a>
@@ -21,6 +22,7 @@
             </div>
 
         {% else %}
+            <!-- Desktop -->
             <div class="auth-forms-container desktop-auth">
                 <form action="/auth/login" method="post" class="form-login">
                     <input type="text"     name="username" placeholder="Usuario"   required>
@@ -37,6 +39,7 @@
                 </form>
             </div>
 
+            <!-- Mobile -->
             <div class="auth-forms-container mobile-auth">
                 <div class="dropdown" style="flex:1;">
                     <button class="btn-primary btn-drop" onclick="toggleDrop(event,'drop-login')">Entrar ▾</button>
@@ -61,21 +64,29 @@
             </div>
         {% endif %}
     </div>
+    <!-- ════════════════════ / NAVBAR ════════════════════ -->
+
+
+    <!-- ══════════════════════ ERROR ══════════════════════ -->
     {% if error %}
     <div class="error-busqueda-container">
         <form action="/" method="get" class="search-wrapper" style="width:100%; max-width:560px;">
-            <input type="text" name="query" placeholder="Busca títulos, juegos, cómics…" value="{{ query_actual }}" required>
+            <input type="text" name="query" placeholder="Busca películas, juegos, libros, cómics…" value="{{ query_actual }}" required>
             <button type="submit" class="btn-primary" style="padding:11px 20px;">🔍</button>
         </form>
         <h1 class="error-title">No se encontró la búsqueda.<br>¿Seguro que se llama así?</h1>
     </div>
     {% endif %}
+    <!-- ══════════════════ / ERROR ══════════════════════ -->
+
+
+    <!-- ══════════════════ MODO BÚSQUEDA ══════════════════ -->
     {% if modo_busqueda %}
     <div class="resultados-wrapper">
 
         <div class="search-top">
             <form action="/" method="get" class="search-wrapper">
-                <input type="text" name="query" placeholder="Busca títulos, juegos, cómics…" value="{{ query_actual }}" required>
+                <input type="text" name="query" placeholder="Busca películas, juegos, libros, cómics…" value="{{ query_actual }}" required>
                 <button type="submit" class="btn-primary" style="padding:11px 20px;">🔍</button>
             </form>
         </div>
@@ -119,12 +130,12 @@
         {% if resultados_busqueda_libros %}
         <div class="categoria-header">
             <div class="categoria-bar books"></div>
-            <span class="categoria-titulo">📚 Libros y Cómics</span>
+            <span class="categoria-titulo">📚 Libros, Cómics y Manga</span>
         </div>
         <div class="tendencias-container">
             {% for res in resultados_busqueda_libros %}
                 {% if res.poster_url %}
-                <a href="/?movie_id={{ res.id }}&media_type={{ res.media_type }}" class="item-carrusel" title="{{ res.title }}">
+                <a href="/?movie_id={{ res.id }}&media_type=book" class="item-carrusel item-libro" title="{{ res.title }}">
                     <img src="{{ res.poster_url }}" alt="{{ res.title }}">
                     <p>{{ res.title }}<span>{{ res.release_date[:4] if res.release_date else '' }}</span></p>
                 </a>
@@ -135,38 +146,46 @@
 
     </div>
     {% endif %}
+    <!-- ════════════════ / MODO BÚSQUEDA ════════════════ -->
+
+
+    <!-- ══════════════════════ HERO ══════════════════════ -->
     {% if peli and not modo_busqueda and not error %}
-    <div class="hero-banner" style="background-image: url('{{ peli.backdrop_url or peli.poster_url }}');" id="hero">
+    <div class="hero-banner {% if media_type == 'book' %}hero-libro{% endif %}" style="background-image: url('{{ peli.backdrop_url or peli.poster_url }}');" id="hero">
         <div class="hero-overlay"></div>
         <div class="hero-content">
 
+            <!-- Buscador sobre el hero -->
             <form action="/" method="get" class="search-wrapper" style="margin-bottom:24px; max-width:500px;">
-                <input type="text" name="query" placeholder="Busca títulos, juegos, cómics…" required>
+                <input type="text" name="query" placeholder="Busca películas, juegos, libros, cómics…" required>
                 <button type="submit" class="btn-primary" style="padding:11px 20px;">🔍</button>
             </form>
 
+            <!-- Título -->
             <h1>{{ peli.title }}</h1>
 
+            <!-- Meta -->
             <div class="meta">
                 <div class="meta-rating">
                     <span class="nota">⭐ {{ peli.vote_average }} / 10</span>
                     <span class="nota-fuente">{{ peli.fuente_nota or 'IMDb' }}</span>
                 </div>
                 <span class="meta-year">{{ peli.release_date[:4] if peli.release_date else '' }}</span>
-                
                 {% if media_type == 'tv' %}
                     <span class="badge-tipo badge-tv">Serie</span>
                 {% elif media_type == 'game' %}
                     <span class="badge-tipo badge-game">Videojuego</span>
                 {% elif media_type == 'book' %}
-                    <span class="badge-tipo badge-book">Libro / Cómic</span>
+                    <span class="badge-tipo badge-book">📚 Libro / Cómic</span>
                 {% else %}
                     <span class="badge-tipo badge-movie">Película</span>
                 {% endif %}
             </div>
 
+            <!-- Sinopsis -->
             <p class="sinopsis">{{ peli.overview or "No hay sinopsis disponible." }}</p>
 
+            <!-- Acciones -->
             <div class="acciones">
                 {% if user_id %}
                     <form action="{% if is_pen %}/accion/pen/remove{% else %}/accion/pen/add{% endif %}"
@@ -201,6 +220,7 @@
                 <a href="/foro/{{ peli.id }}" class="btn-icon">💬 Ir al Foro</a>
             </div>
 
+            <!-- Plataformas -->
             <div class="plataformas-container">
                 {% if peli.plataformas_nombres %}
                     <p class="section-label">🎮 Plataformas disponibles</p>
@@ -223,15 +243,17 @@
                 {% endif %}
             </div>
 
+            <!-- Podcasts / Streams / Tiendas -->
             <div class="podcasts-container">
                 <p class="section-label">
                     {% if media_type == 'game' %}🎧 Ver streams y directos
-                    {% elif media_type == 'book' %}🛒 Comprar o Leer en:
+                    {% elif media_type == 'book' %}🛒 Dónde comprarlo
                     {% else %}🎙️ Podcasts sobre este título{% endif %}
                 </p>
-                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <div class="tiendas-row {% if media_type == 'book' %}tiendas-row--book{% endif %}">
                     {% for pod in podcasts %}
-                        <a href="{{ pod.link }}" target="_blank" class="btn-plat"
+                        <a href="{{ pod.link }}" target="_blank"
+                           class="btn-plat {% if media_type == 'book' %}btn-tienda{% endif %}"
                            style="background: {{ pod.color }}; color: white;">
                             {{ pod.icono }} {{ pod.nombre }}
                         </a>
@@ -239,7 +261,13 @@
                 </div>
             </div>
 
-        </div></div>{% endif %}
+        </div><!-- /hero-content -->
+    </div><!-- /hero-banner -->
+    {% endif %}
+    <!-- ════════════════════ / HERO ════════════════════ -->
+
+
+    <!-- ══════════════════════ TRAILER ══════════════════════ -->
     {% if trailer and busqueda_activa and not modo_busqueda and not error %}
     <div class="trailer-container">
         <iframe src="https://www.youtube.com/embed/{{ trailer }}?autoplay=0&controls=1"
@@ -248,6 +276,7 @@
     {% endif %}
 
 
+    <!-- ══════════════════════ CARRUSEL ══════════════════════ -->
     {% if carrusel_pelis and not modo_busqueda and not error %}
     <div class="seccion-carrusel" {% if not (trailer and busqueda_activa) and not busqueda_activa %}style="margin-top:-60px;"{% endif %}>
         <div class="carrusel-header">
@@ -266,6 +295,7 @@
     {% endif %}
 
 
+    <!-- ══════════════════════ JS ══════════════════════ -->
     <script>
         /* ── Scroll navbar ─────────────────────────────── */
         const navbar = document.getElementById('navbar');
