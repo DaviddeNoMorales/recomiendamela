@@ -1,5 +1,6 @@
 import os
 import shutil
+import requests
 from fastapi import FastAPI, Request, File, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -22,6 +23,49 @@ inicializar_db()
 app.include_router(auth_router)
 app.include_router(acciones_router)
 
+def buscar_multimedia(query: str):
+    api_key = os.getenv('API_KEY')
+    url = f"https://api.themoviedb.org/3/search/multi?api_key={api_key}&query={urllib.parse.quote(query)}&language=es-ES"
+    try:
+        r = requests.get(url).json()
+        results = r.get('results', [])
+        # Filtramos para quedarnos únicamente con películas y series de televisión
+        filtrados = [res for res in results if res.get('media_type') in ['movie', 'tv']]
+        return filtrados
+    except Exception as e:
+        print("Error en búsqueda múltiple:", e)
+        return []
+
+def obtener_detalles_tv(tv_id: int):
+    api_key = os.getenv('API_KEY')
+    url = f"https://api.themoviedb.org/3/tv/{tv_id}?api_key={api_key}&language=es-ES&append_to_response=videos,watch/providers"
+    try:
+        res = requests.get(url).json()
+        if 'id' in res:
+            # Mapeo de compatibilidad con la plantilla existente de películas
+            res['title'] = res.get('name')
+            res['release_date'] = res.get('first_air_date')
+            return res
+        return None
+    except Exception as e:
+        print("Error obteniendo detalles de la serie:", e)
+        return None
+
+def obtener_similares_tv(tv_id: int):
+    api_key = os.getenv('API_KEY')
+    url = f"https://api.themoviedb.org/3/tv/{tv_id}/similar?api_key={api_key}&language=es-ES"
+    try:
+        res = requests.get(url).json()
+        results = res.get('results', [])
+        for r in results:
+            r['title'] = r.get('name')
+            r['release_date'] = r.get('first_air_date')
+            r['media_type'] = 'tv'
+        return results
+    except Exception as e:
+        print("Error obteniendo series similares:", e)
+        return []
+
 def obtener_enlace_directo(plataforma, titulo):
     q = urllib.parse.quote(titulo)
     links = {
@@ -37,7 +81,7 @@ def obtener_enlace_directo(plataforma, titulo):
     return links.get(plataforma, f"https://www.justwatch.com/es/busqueda?q={q}")
 
 @app.get("/", response_class=HTMLResponse)
-async def inicio(request: Request, query: str = None, movie_id: int = None):
+async def inicio(request: Request, query: str = None, movie_id: int = None, media_type: str = "movie"):
     user_id = request.cookies.get("user_id")
     username = request.cookies.get("username")
     peli, error, plataformas, trailer, is_fav, is_pen = None, None, [], None, False, False
@@ -46,7 +90,7 @@ async def inicio(request: Request, query: str = None, movie_id: int = None):
     resultados_busqueda = []
     podcasts_links = []
     user_avatar = None
-    mid = movie_id # ID exacto de la película
+    mid = movie_id # ID asignado al contenido multimedia activo
 
     # 1. Obtener Avatar del usuario
     if user_id:
@@ -58,15 +102,15 @@ async def inicio(request: Request, query: str = None, movie_id: int = None):
         else:
             user_avatar = f"https://ui-avatars.com/api/?name={username}&background=e50914&color=fff&rounded=true"
 
-    # 2. Si el usuario realiza una búsqueda, mostramos el listado
+    # 2. Búsqueda unificada multiformato (Películas y Series)
     if query:
-        resultados_busqueda = buscar_peliculas(query)
+        resultados_busqueda = buscar_multimedia(query)
         for res in resultados_busqueda:
             res['poster_url'] = f"https://image.tmdb.org/t/p/w342{res['poster_path']}" if res.get('poster_path') else ""
         if not resultados_busqueda:
             error = f"No se han encontrado resultados para '{query}'."
 
-    # 3. Si no hay búsqueda ni ID específico, cargamos el inicio por defecto
+    # 3. Carga por defecto si no hay búsquedas o selección activa
     elif not mid:
         if user_id:
             conn = get_db_connection()
@@ -75,32 +119,45 @@ async def inicio(request: Request, query: str = None, movie_id: int = None):
             if favs:
                 genre_ids = [str(f['genre_id']) for f in favs[:3]]
                 carrusel_pelis = descubrir_por_generos(genre_ids)
-                carrusel_titulo = "Recommended para ti"
+                carrusel_titulo = "Recomendado para ti"
             else:
                 carrusel_pelis = descubrir_por_generos(["27", "14"])
                 carrusel_titulo = "Nuestra selección para empezar"
+            for cp in carrusel_pelis:
+                cp['media_type'] = 'movie'
         else:
             carrusel_pelis = obtener_populares()
             carrusel_titulo = "Tendencias Mundiales"
+            for cp in carrusel_pelis:
+                cp['media_type'] = 'movie'
 
         if carrusel_pelis:
             mid = random.choice(carrusel_pelis[:5])['id']
+            media_type = "movie"
 
-    # 4. Procesar la película principal (ya sea elegida al azar para el home o por click directo)
+    # 4. Procesamiento de la ficha técnica activa (Película o Serie de TV)
     if mid and not resultados_busqueda:
-        peli = obtener_detalles_pelicula(mid)
+        if media_type == "tv":
+            peli = obtener_detalles_tv(mid)
+            if peli and movie_id:
+                carrusel_pelis = obtener_similares_tv(mid)
+                carrusel_titulo = f"Series similares a {peli.get('title')}"
+        else:
+            peli = obtener_detalles_pelicula(mid)
+            if peli and movie_id:
+                carrusel_pelis = obtener_similares(mid)
+                carrusel_titulo = f"Películas similares a {peli.get('title')}"
+
         if peli:
             peli['vote_average'] = round(peli.get('vote_average', 0), 1)
             peli['poster_url'] = f"https://image.tmdb.org/t/p/w500{peli['poster_path']}" if peli.get('poster_path') else None
             peli['backdrop_url'] = f"https://image.tmdb.org/t/p/original{peli['backdrop_path']}" if peli.get('backdrop_path') else None
 
-            # Si hizo clic en un ID concreto, cargamos similares
             if movie_id:
-                carrusel_pelis = obtener_similares(mid)
-                carrusel_titulo = f"Películas similares a {peli.get('title')}"
-
-            for cp in carrusel_pelis:
-                cp['poster_url'] = f"https://image.tmdb.org/t/p/w342{cp['poster_path']}" if cp.get('poster_path') else ""
+                for cp in carrusel_pelis:
+                    cp['poster_url'] = f"https://image.tmdb.org/t/p/w342{cp['poster_path']}" if cp.get('poster_path') else ""
+                    if 'media_type' not in cp:
+                        cp['media_type'] = media_type
                 
             watch_data = peli.get('watch/providers', {}).get('results', {}).get('ES', {})
             plataformas_crudas = watch_data.get('flatrate', [])
@@ -125,7 +182,7 @@ async def inicio(request: Request, query: str = None, movie_id: int = None):
                     plat['direct_link'] = obtener_enlace_directo(nombre_base, peli['title'])
                     plataformas.append(plat)
             
-            # --- CONFIGURACIÓN CORREGIDA: Formatos de búsqueda de Podcasts ---
+            # Formatos de búsqueda de Podcasts automáticos
             titulo_url = urllib.parse.quote(peli['title'])
             podcasts_links = [
                 {"nombre": "Spotify", "link": f"https://open.spotify.com/search/{titulo_url}", "color": "#1DB954", "icono": "🎧"},
@@ -161,6 +218,7 @@ async def inicio(request: Request, query: str = None, movie_id: int = None):
             "carrusel_pelis": carrusel_pelis,
             "resultados_busqueda": resultados_busqueda,
             "query_actual": query,
+            "media_type": media_type,
             "busqueda_activa": bool(movie_id)
         }
     )

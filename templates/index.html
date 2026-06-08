@@ -50,7 +50,7 @@
             <div class="tendencias-container" style="display: flex; gap: 15px; flex-wrap: wrap;">
                 {% for res in resultados_busqueda %}
                     {% if res.poster_url %}
-                    <a href="/?movie_id={{ res.id }}" class="item-carrusel" style="width: 45%; max-width: 160px; text-decoration: none;">
+                    <a href="/?movie_id={{ res.id }}&media_type={{ res.media_type or 'movie' }}" class="item-carrusel" style="width: 45%; max-width: 160px; text-decoration: none;">
                         <img src="{{ res.poster_url }}" alt="{{ res.title }}" style="width: 100%; border-radius: 8px;">
                         <p style="color: #fff; text-align: center; margin-top: 10px; font-size: 13px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ res.title }}<br><span style="color: #aaa; font-weight: normal;">{{ res.release_date[:4] if res.release_date else '' }}</span></p>
                     </a>
@@ -74,6 +74,9 @@
             <div class="meta">
                 <span class="nota" style="color: #46d369; font-weight: bold;">{{ peli.vote_average * 10 }}% Coincidencia</span>
                 <span style="color: #ccc; margin-left: 10px;">{{ peli.release_date[:4] if peli.release_date else '' }}</span>
+                <span style="background: #333; color: #e50914; padding: 2px 6px; font-size: 11px; border-radius: 4px; margin-left: 10px; font-weight: bold; letter-spacing: 0.5px;">
+                    {{ 'SERIE' if media_type == 'tv' else 'PELÍCULA' }}
+                </span>
             </div>
             <p class="sinopsis">{{ peli.overview or "No hay sinopsis disponible." }}</p>
             
@@ -122,7 +125,7 @@
             </div>
 
             <div class="podcasts-container" style="margin-top: 20px; padding-bottom: 20px;">
-                <h3 style="color: #999; font-size: 14px; margin-bottom: 10px;">🎙️ Buscar podcasts sobre esta película:</h3>
+                <h3 style="color: #999; font-size: 14px; margin-bottom: 10px;">🎙️ Buscar podcasts sobre este título:</h3>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     {% for pod in podcasts %}
                         <a href="{{ pod.link }}" target="_blank" class="btn-plat" style="background: {{ pod.color }}; color: white; padding: 8px 15px; border-radius: 20px; text-decoration: none; font-weight: bold; font-size: 13px; transition: opacity 0.2s; border: 1px solid rgba(255,255,255,0.2);" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
@@ -148,7 +151,7 @@
         <div class="carrusel tendencias-container" style="display: flex; gap: 10px; padding: 10px 4%; overflow-x: auto;">
             {% for cp in carrusel_pelis %}
                 {% if cp.poster_url %}
-                <a href="/?movie_id={{ cp.id }}" class="item-carrusel" title="{{ cp.title }}" style="flex: 0 0 auto; width: 140px;">
+                <a href="/?movie_id={{ cp.id }}&media_type={{ cp.media_type or 'movie' }}" class="item-carrusel" title="{{ cp.title }}" style="flex: 0 0 auto; width: 140px;">
                     <img src="{{ cp.poster_url }}" alt="{{ cp.title }}" style="width: 100%; border-radius: 8px;">
                 </a>
                 {% endif %}
