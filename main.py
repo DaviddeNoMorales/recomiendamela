@@ -84,13 +84,13 @@ def obtener_enlace_directo(plataforma, titulo):
 async def inicio(request: Request, query: str = None, movie_id: int = None, media_type: str = "movie"):
     user_id = request.cookies.get("user_id")
     username = request.cookies.get("username")
-    peli, error, plataformas, trailer, is_fav, is_pen = None, None, [], None, False, False
+    peli, error, plataformas, trailer, is_fav, is_pen = None, False, [], None, False, False
     carrusel_titulo = ""
     carrusel_pelis = []
     resultados_busqueda = []
     podcasts_links = []
     user_avatar = None
-    mid = movie_id # ID asignado al contenido multimedia activo
+    mid = movie_id
 
     # 1. Obtener Avatar del usuario
     if user_id:
@@ -108,7 +108,7 @@ async def inicio(request: Request, query: str = None, movie_id: int = None, medi
         for res in resultados_busqueda:
             res['poster_url'] = f"https://image.tmdb.org/t/p/w342{res['poster_path']}" if res.get('poster_path') else ""
         if not resultados_busqueda:
-            error = f"No se han encontrado resultados para '{query}'."
+            error = True # Modificado para activar el bloque gigante de error en HTML
 
     # 3. Carga por defecto si no hay búsquedas o selección activa
     elif not mid:
@@ -153,7 +153,6 @@ async def inicio(request: Request, query: str = None, movie_id: int = None, medi
             peli['poster_url'] = f"https://image.tmdb.org/t/p/w500{peli['poster_path']}" if peli.get('poster_path') else None
             peli['backdrop_url'] = f"https://image.tmdb.org/t/p/original{peli['backdrop_path']}" if peli.get('backdrop_path') else None
 
-            # CORRECCIÓN: El bucle ahora se ejecuta siempre para construir las imágenes del carrusel por defecto
             for cp in carrusel_pelis:
                 cp['poster_url'] = f"https://image.tmdb.org/t/p/w342{cp['poster_path']}" if cp.get('poster_path') else ""
                 if 'media_type' not in cp:
@@ -182,7 +181,6 @@ async def inicio(request: Request, query: str = None, movie_id: int = None, medi
                     plat['direct_link'] = obtener_enlace_directo(nombre_base, peli['title'])
                     plataformas.append(plat)
             
-            # Formatos de búsqueda de Podcasts automáticos
             titulo_url = urllib.parse.quote(peli['title'])
             podcasts_links = [
                 {"nombre": "Spotify", "link": f"https://open.spotify.com/search/{titulo_url}", "color": "#1DB954", "icono": "🎧"},

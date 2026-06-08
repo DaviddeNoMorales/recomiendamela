@@ -72,26 +72,7 @@ body {
     color: #e50914;
 }
 
-/* MINI BUSCADOR DEL PERFIL */
-.form-buscar-perfil {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    margin: 0 15px;
-    flex: 1;
-    max-width: 400px;
-}
-.form-buscar-perfil input {
-    padding: 8px 10px;
-    font-size: 0.9rem;
-    border-radius: 4px;
-    border: 1px solid #444;
-    background: #222;
-    color: white;
-    width: 100%;
-}
-
-/* HERO BANNER */
+/* DEGRADADO DEL HERO BANNER PARA FUSIONAR EL CORTE */
 .hero-banner {
     position: relative;
     height: 80vh;
@@ -104,7 +85,10 @@ body {
 .hero-overlay {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: linear-gradient(to right, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.8) 100%);
+    /* Unificamos degradado horizontal para texto y degradado vertical hacia #141414 (color del fondo) */
+    background: 
+        linear-gradient(to right, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.8) 100%),
+        linear-gradient(to bottom, rgba(20,20,20,0) 60%, #141414 100%);
 }
 
 .hero-content {
@@ -118,6 +102,7 @@ body {
 .hero-content h1 {
     font-size: 3.5rem;
     margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
 }
 
 .sinopsis {
@@ -125,6 +110,7 @@ body {
     line-height: 1.4;
     margin-bottom: 20px;
     color: #ccc;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
 }
 
 /* BOTONES DE ACCIÓN */
@@ -168,7 +154,49 @@ body {
     color: white !important;
 }
 
-/* MEDIA QUERIES PARA MÓVILES (Magia Responsive) */
+/* OCULTAMOS LOS MENÚS MÓVILES EN ORDENADOR POR DEFECTO */
+.mobile-auth {
+    display: none !important;
+}
+
+/* Estilos de Menú Desplegable */
+.dropdown {
+    position: relative;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #1f1f1f;
+    min-width: 100%;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.8);
+    z-index: 20;
+    padding: 15px;
+    border-radius: 6px;
+    margin-top: 8px;
+    border: 1px solid #444;
+}
+
+.dropdown-content.show {
+    display: block;
+}
+
+.form-login-mob {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.form-login-mob input {
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid #333;
+    background: #111;
+    color: white;
+    width: 100%;
+}
+
+/* MEDIA QUERIES PARA MÓVILES */
 @media (max-width: 768px) {
     /* Navbar móvil */
     .navbar {
@@ -180,23 +208,16 @@ body {
         gap: 15px;
     }
     
-    .auth-forms-container {
-        flex-direction: column;
+    /* CAMBIO CLAVE: Esconder escritorio, mostrar versión móvil */
+    .desktop-auth {
+        display: none !important;
+    }
+    
+    .mobile-auth {
+        display: flex !important;
         width: 100%;
         gap: 10px;
-    }
-    
-    .form-login {
-        flex-direction: column;
-        width: 100%;
-    }
-    
-    .form-login input {
-        width: 100%;
-    }
-    
-    .auth-divider {
-        display: none;
+        margin-top: 5px;
     }
 
     /* Buscador Perfil en móvil */

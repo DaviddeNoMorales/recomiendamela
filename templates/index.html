@@ -2,24 +2,24 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Recomiéndamela</title>
+    <title>Recomiendamela</title>
     <link rel="stylesheet" href="/static/index.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 </head>
 <body>
 
-    <div class="navbar" {% if resultados_busqueda %}style="background: #000; position: relative;"{% endif %}>
-        <a href="/" class="logo">Recomiéndamela</a>
+    <div class="navbar" {% if resultados_busqueda or error %}style="background: #000; position: relative;"{% endif %}>
+        <a href="/" class="logo">Recomiendamela</a>
         
         {% if user_id %}
             <div class="auth-forms-container">
-                <img src="{{ user_avatar }}" class="nav-avatar" alt="Avatar" style="width: 30px; border-radius: 50%;">
+                <img src="{{ user_avatar }}" class="nav-avatar" alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;">
                 <span style="font-weight: bold; color: #fff;">Hola, {{ username }}</span>
                 <a href="/perfil" class="btn-nav">Perfil</a>
                 <a href="/auth/logout" class="btn-nav btn-danger">Salir</a>
             </div>
         {% else %}
-            <div class="auth-forms-container">
+            <div class="auth-forms-container desktop-auth">
                 <form action="/auth/login" method="post" class="form-login">
                     <input type="text" name="username" placeholder="Usuario" required>
                     <input type="password" name="password" placeholder="Contraseña" required>
@@ -32,11 +32,42 @@
                     <button type="submit" class="btn-primary" style="background: transparent; border: 1px solid #e50914;">Registro</button>
                 </form>
             </div>
+            
+            <div class="auth-forms-container mobile-auth">
+                <div class="dropdown" style="flex: 1;">
+                    <button class="btn-primary btn-drop" style="width: 100%; font-size: 14px;" onclick="toggleDrop(event, 'drop-login')">Entrar ⬇</button>
+                    <div id="drop-login" class="dropdown-content" onclick="event.stopPropagation()">
+                        <form action="/auth/login" method="post" class="form-login-mob">
+                            <input type="text" name="username" placeholder="Usuario" required>
+                            <input type="password" name="password" placeholder="Contraseña" required>
+                            <button type="submit" class="btn-primary" style="width: 100%; margin-top: 5px;">Iniciar Sesión</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="dropdown" style="flex: 1;">
+                    <button class="btn-primary btn-drop" style="width: 100%; font-size: 14px; background: transparent; border: 1px solid #e50914;" onclick="toggleDrop(event, 'drop-reg')">Registro ⬇</button>
+                    <div id="drop-reg" class="dropdown-content" onclick="event.stopPropagation()">
+                        <form action="/auth/register" method="post" class="form-login-mob">
+                            <input type="text" name="username" placeholder="Nuevo Usuario" required>
+                            <input type="password" name="password" placeholder="Contraseña" required>
+                            <button type="submit" class="btn-primary" style="width: 100%; margin-top: 5px; background: transparent; border: 1px solid #e50914;">Registrarse</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
         {% endif %}
     </div>
 
     {% if error %}
-        <div class="error" style="position: absolute; top: 80px; width: 90%; z-index: 1000; left: 5%;">⚠️ {{ error }}</div>
+        <div class="error-busqueda-container" style="padding: 60px 4%; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 50vh;">
+            <form action="/" method="get" class="form-buscar" style="width: 100%; max-width: 600px; margin-bottom: 40px; display: flex; gap: 10px;">
+                <input type="text" name="query" placeholder="Busca títulos, personajes, géneros..." value="{{ query_actual }}" required style="flex: 1; padding: 12px; background: #333; color: white; border: none; border-radius: 4px; font-size: 16px;">
+                <button type="submit" class="btn-primary" style="padding: 12px 25px; font-size: 16px;">🔍</button>
+            </form>
+            <h1 style="color: #e50914; font-size: clamp(2rem, 5vw, 3.5rem); font-weight: bold; text-shadow: 2px 2px 8px rgba(0,0,0,0.8); line-height: 1.2;">
+                No se ha encontrado la búsqueda.<br>¿Seguro que se llama así?
+            </h1>
+        </div>
     {% endif %}
 
     {% if resultados_busqueda %}
@@ -60,7 +91,7 @@
         </div>
     {% endif %}
 
-    {% if peli and not resultados_busqueda %}
+    {% if peli and not resultados_busqueda and not error %}
     <div class="hero-banner" style="background-image: url('{{ peli.backdrop_url or peli.poster_url }}');" id="hero">
         <div class="hero-overlay"></div>
         <div class="hero-content">
@@ -71,10 +102,12 @@
             </form>
 
             <h1>{{ peli.title }}</h1>
-            <div class="meta">
-                <span class="nota" style="color: #46d369; font-weight: bold;">{{ peli.vote_average * 10 }}% Coincidencia</span>
-                <span style="color: #ccc; margin-left: 10px;">{{ peli.release_date[:4] if peli.release_date else '' }}</span>
-                <span style="background: #333; color: #e50914; padding: 2px 6px; font-size: 11px; border-radius: 4px; margin-left: 10px; font-weight: bold; letter-spacing: 0.5px;">
+            <div class="meta" style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                <span class="nota" style="color: #f5c518; font-weight: bold; font-size: 1.1rem; text-shadow: 1px 1px 2px #000;">
+                    ⭐ {{ peli.vote_average }} / 10
+                </span>
+                <span style="color: #ccc;">{{ peli.release_date[:4] if peli.release_date else '' }}</span>
+                <span style="background: #333; color: #e50914; padding: 2px 6px; font-size: 11px; border-radius: 4px; font-weight: bold; letter-spacing: 0.5px;">
                     {{ 'SERIE' if media_type == 'tv' else 'PELÍCULA' }}
                 </span>
             </div>
@@ -139,13 +172,13 @@
     </div>
     {% endif %}
 
-    {% if trailer and busqueda_activa and not resultados_busqueda %}
+    {% if trailer and busqueda_activa and not resultados_busqueda and not error %}
         <div class="trailer-container" style="padding: 20px 4%; max-width: 1000px; margin: 0 auto;">
             <iframe src="https://www.youtube.com/embed/{{ trailer }}?autoplay=0&controls=1" allowfullscreen style="width: 100%; aspect-ratio: 16/9; border: none; border-radius: 8px;"></iframe>
         </div>
     {% endif %}
 
-    {% if carrusel_pelis and not resultados_busqueda %}
+    {% if carrusel_pelis and not resultados_busqueda and not error %}
     <div class="seccion-carrusel" {% if not (trailer and busqueda_activa) and not busqueda_activa %}style="margin-top: -80px;"{% endif %}>
         <h3 style="color: white; padding: 0 4%;">{{ carrusel_titulo }}</h3>
         <div class="carrusel tendencias-container" style="display: flex; gap: 10px; padding: 10px 4%; overflow-x: auto;">
@@ -198,6 +231,22 @@
                     this.scrollLeft += e.deltaY;
                 }
             }, { passive: false });
+        });
+
+        // Lógica para desplegables en móvil
+        function toggleDrop(e, id) {
+            e.stopPropagation(); // Evita que se cierre instantáneamente
+            document.querySelectorAll('.dropdown-content').forEach(d => {
+                if(d.id !== id) d.classList.remove('show');
+            });
+            document.getElementById(id).classList.toggle('show');
+        }
+
+        // Cierra los menús si haces clic fuera de ellos
+        window.addEventListener('click', function() {
+            document.querySelectorAll('.dropdown-content').forEach(d => {
+                d.classList.remove('show');
+            });
         });
     </script>
 </body>
