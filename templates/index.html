@@ -239,9 +239,7 @@
                 </div>
             </div>
 
-        </div>
-    </div>
-    {% endif %}
+        </div></div>{% endif %}
     {% if trailer and busqueda_activa and not modo_busqueda and not error %}
     <div class="trailer-container">
         <iframe src="https://www.youtube.com/embed/{{ trailer }}?autoplay=0&controls=1"
@@ -282,6 +280,7 @@
 
 
     <script>
+        /* ── Scroll navbar ─────────────────────────────── */
         const navbar = document.getElementById('navbar');
         if (navbar && !navbar.style.position.includes('relative')) {
             window.addEventListener('scroll', () => {
@@ -289,6 +288,7 @@
             }, { passive: true });
         }
 
+        /* ── Auto-scroll al hero ───────────────────────── */
         {% if busqueda_activa and not modo_busqueda %}
         window.addEventListener('load', () => {
             const hero = document.getElementById('hero');
@@ -296,6 +296,7 @@
         });
         {% endif %}
 
+        /* ── Acciones AJAX (pendiente / favorito) ──────── */
         document.querySelectorAll('.form-accion').forEach(form => {
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -317,6 +318,14 @@
             });
         });
 
+        /* ── Scroll Horizontal Clásico (para perfil) ───── */
+        document.querySelectorAll('.carrusel').forEach(c => {
+            c.addEventListener('wheel', e => {
+                if (e.deltaY !== 0) { e.preventDefault(); c.scrollLeft += e.deltaY; }
+            }, { passive: false });
+        });
+
+        /* ── Dropdowns mobile ──────────────────────────── */
         function toggleDrop(e, id) {
             e.stopPropagation();
             document.querySelectorAll('.dropdown-content').forEach(d => {
@@ -328,6 +337,91 @@
         window.addEventListener('click', () => {
             document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
         });
+
+        /* ── MAGIA JS: Carrusel Infinito + Manual ──────── */
+        const continuo = document.querySelector('.carrusel-continuo');
+        if (continuo) {
+            let isDown = false;
+            let startX;
+            let scrollLeftPos;
+            let isHovered = false;
+
+            // Animación automática
+            function autoScroll() {
+                if (!isDown && !isHovered) {
+                    continuo.scrollLeft += 1; 
+                    
+                    // Si llegamos a la mitad exacta (donde empiezan los clones), volvemos a 0
+                    if (continuo.scrollLeft >= continuo.scrollWidth / 2) {
+                        continuo.scrollLeft -= continuo.scrollWidth / 2;
+                    }
+                }
+                requestAnimationFrame(autoScroll);
+            }
+
+            // Eventos de ratón para arrastrar manual
+            continuo.addEventListener('mousedown', (e) => {
+                isDown = true;
+                continuo.style.cursor = 'grabbing';
+                startX = e.pageX - continuo.offsetLeft;
+                scrollLeftPos = continuo.scrollLeft;
+            });
+
+            continuo.addEventListener('mouseleave', () => {
+                isDown = false;
+                isHovered = false;
+                continuo.style.cursor = 'grab';
+            });
+
+            continuo.addEventListener('mouseup', () => {
+                isDown = false;
+                continuo.style.cursor = 'grab';
+            });
+
+            continuo.addEventListener('mouseenter', () => {
+                isHovered = true; // Pausa al pasar el ratón
+            });
+
+            continuo.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - continuo.offsetLeft;
+                const walk = (x - startX) * 1.5; // Velocidad de arrastre
+                continuo.scrollLeft = scrollLeftPos - walk;
+
+                // Bucle infinito mientras arrastramos
+                const maxScroll = continuo.scrollWidth / 2;
+                if (continuo.scrollLeft >= maxScroll) {
+                    continuo.scrollLeft -= maxScroll;
+                    scrollLeftPos -= maxScroll;
+                } else if (continuo.scrollLeft <= 0) {
+                    continuo.scrollLeft += maxScroll;
+                    scrollLeftPos += maxScroll;
+                }
+            });
+
+            // Permite usar la rueda del ratón de arriba a abajo para mover el carrusel de lado a lado
+            continuo.addEventListener('wheel', (e) => {
+                if (e.deltaY !== 0) {
+                    e.preventDefault();
+                    continuo.scrollLeft += e.deltaY;
+                    
+                    const maxScroll = continuo.scrollWidth / 2;
+                    if (continuo.scrollLeft >= maxScroll) {
+                        continuo.scrollLeft -= maxScroll;
+                    } else if (continuo.scrollLeft <= 0) {
+                        continuo.scrollLeft += maxScroll;
+                    }
+                }
+            }, { passive: false });
+
+            // Soporte para móviles (Pausar auto-scroll al tocar la pantalla)
+            continuo.addEventListener('touchstart', () => isHovered = true, {passive: true});
+            continuo.addEventListener('touchend', () => isHovered = false, {passive: true});
+
+            // Iniciar bucle
+            requestAnimationFrame(autoScroll);
+        }
     </script>
 
 </body>

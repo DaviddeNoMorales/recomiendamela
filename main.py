@@ -38,7 +38,6 @@ def buscar_libros(query: str):
         r = requests.get(url, timeout=6).json()
         out = []
         for item in r.get("results", []):
-            # Cambiamos la resolución de la portada a alta calidad
             cover = item.get("artworkUrl100", "").replace("100x100bb", "600x600bb")
             if not cover:
                 continue
@@ -65,11 +64,10 @@ def obtener_detalles_libro(book_id: str):
         item = r["results"][0]
         cover = item.get("artworkUrl100", "").replace("100x100bb", "600x600bb")
         
-        # Limpiar etiquetas HTML feas que a veces vienen en la sinopsis
         desc_html = item.get("description", "No hay sinopsis disponible.")
         desc_limpia = re.sub('<[^<]+>', '', desc_html)
         
-        vote_avg = round(item.get("averageUserRating", 0) * 2, 1) # Apple es sobre 5, lo pasamos a 10
+        vote_avg = round(item.get("averageUserRating", 0) * 2, 1)
 
         return {
             "id": book_id,
@@ -103,10 +101,8 @@ def buscar_manga(query: str):
             if not cover:
                 continue
                 
-            # Jikan a veces trae el título en español si existe, si no, usa el general
             title = item.get("title_spanish") or item.get("title", "Sin título")
             
-            # Año de publicación
             year = ""
             published = item.get("published", {}).get("prop", {}).get("from", {})
             if published and published.get("year"):
@@ -399,8 +395,6 @@ async def inicio(
             )
 
         resultados_busqueda_juegos = buscar_videojuegos(query)
-        
-        # Combinamos Apple Books y Jikan (Manga) en la misma fila
         resultados_busqueda_libros = buscar_libros(query) + buscar_manga(query)
 
         if not resultados_busqueda_cine and not resultados_busqueda_juegos and not resultados_busqueda_libros:
@@ -435,7 +429,6 @@ async def inicio(
     # ── DETALLE DEL ELEMENTO ACTIVO ───────────────────────────────
     if mid and not modo_busqueda:
 
-        # ── Videojuego ──
         if media_type == "game":
             peli            = obtener_detalles_videojuego(mid)
             carrusel_pelis  = []
@@ -447,7 +440,6 @@ async def inicio(
                     {"nombre": "YouTube",            "link": f"https://www.youtube.com/results?search_query={tu}+gameplay", "color": "#FF0000", "icono": "▶️"},
                 ]
 
-        # ── Libro / Cómic / Manga ──
         elif media_type in ("book", "comic", "manga"):
             peli            = obtener_detalles_libro_o_manga(mid, media_type)
             carrusel_pelis  = []
@@ -456,7 +448,6 @@ async def inicio(
                 media_type     = peli.get("media_type", media_type)
                 podcasts_links = tiendas_libro(peli["title"], media_type)
 
-        # ── Serie ──
         elif media_type == "tv":
             peli = obtener_detalles_tv(mid)
             if peli and movie_id:
@@ -483,7 +474,6 @@ async def inicio(
                         trailer = v["key"]
                         break
 
-        # ── Película ──
         else:
             peli = obtener_detalles_pelicula(mid)
             if peli and movie_id:
@@ -610,7 +600,6 @@ async def foro_pelicula(request: Request, movie_id: str):
         context={"user_id": user_id, "username": username, "user_avatar": user_avatar, "peli": peli, "comentarios": comentarios},
     )
 
-
 @app.get("/perfil", response_class=HTMLResponse)
 async def perfil(request: Request):
     user_id  = request.cookies.get("user_id")
@@ -656,7 +645,6 @@ async def perfil(request: Request):
             "usuarios":             usuarios,
         },
     )
-
 
 @app.post("/perfil/avatar", response_class=RedirectResponse)
 async def actualizar_avatar(request: Request, file: UploadFile = File(...)):

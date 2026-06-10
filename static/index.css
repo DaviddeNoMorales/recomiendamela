@@ -417,7 +417,7 @@ body {
     z-index: 2;
     max-width: 700px;
     width: 100%;
-    padding: 120px 5% 60px; /* AQUÍ ESTÁ LA MAGIA: 120px de techo para no pisar el logo */
+    padding: 120px 5% 60px; 
     animation: heroReveal 0.8s ease both;
 }
 
@@ -428,7 +428,7 @@ body {
 
 .hero-content h1 {
     font-family: var(--font-display);
-    font-size: clamp(2.2rem, 5vw, 4rem); /* Ligeramente rebajado el máximo para títulos largos */
+    font-size: clamp(2.2rem, 5vw, 4rem); 
     letter-spacing: 1px;
     line-height: 1.05;
     margin-bottom: 12px;
@@ -683,7 +683,7 @@ body {
 
 
 /* ============================================================
-   CARRUSEL AUTOMÁTICO INFINITO (MARQUESINA)
+   CARRUSEL AUTOMÁTICO E INTERACTIVO
    ============================================================ */
 .seccion-carrusel {
     padding: 0 0 48px;
@@ -703,28 +703,30 @@ body {
     color: var(--text);
 }
 
+/* Ahora el contenedor permite scroll manual sin barras */
 .carrusel-continuo {
     width: 100%;
-    overflow: hidden;
+    overflow-x: auto; 
     position: relative;
     padding: 6px 0 12px;
+    scrollbar-width: none; /* Oculta barra en Firefox */
+    cursor: grab;
 }
 
+.carrusel-continuo::-webkit-scrollbar {
+    display: none; /* Oculta barra en Chrome/Safari */
+}
+
+.carrusel-continuo:active {
+    cursor: grabbing;
+}
+
+/* La pista ya NO tiene animación CSS */
 .carrusel-track {
     display: flex;
     gap: 12px;
     width: max-content;
-    animation: scroll-infinito 40s linear infinite;
     padding-left: 5%;
-}
-
-.carrusel-track:hover {
-    animation-play-state: paused;
-}
-
-@keyframes scroll-infinito {
-    0%   { transform: translateX(0); }
-    100% { transform: translateX(calc(-50% - 6px)); }
 }
 
 .item-peli {
@@ -732,6 +734,10 @@ body {
     flex: 0 0 auto;
     width: 140px;
     transition: transform 0.2s ease;
+    /* Evitamos que la imagen sea arrastrada nativamente por el navegador, 
+       así nuestro código JS se encarga de mover el carrusel entero */
+    user-drag: none; 
+    -webkit-user-drag: none;
 }
 
 .item-peli:hover { transform: scale(1.05); }
@@ -744,6 +750,7 @@ body {
     border: 1px solid var(--border);
     display: block;
     transition: border-color var(--transition);
+    pointer-events: none; /* Fundamental para que el JS detecte el arrastre limpio */
 }
 
 .item-peli:hover img { border-color: rgba(255,255,255,0.22); }
@@ -774,8 +781,7 @@ body {
     box-shadow: 0 6px 24px rgba(232, 160, 32, 0.15);
 }
 
-/* Hero de libro: cuando la imagen es portada (vertical),
-   la tratamos diferente para no estirar feo en el backdrop */
+/* Hero de libro */
 .hero-banner.hero-libro {
     background-size: cover;
     background-position: center;
@@ -794,36 +800,10 @@ body {
             rgba(13,13,15,0.7)  100%);
 }
 
-/* Fila de botones de tiendas — más grande y visible que los pills de podcast */
-.tiendas-row {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.tiendas-row--book {
-    gap: 10px;
-    margin-top: 4px;
-}
-
-/* Botón de tienda: más ancho y con acento dorado en hover */
-.btn-tienda {
-    padding: 10px 20px !important;
-    border-radius: var(--radius-sm) !important;
-    font-size: 0.85rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.4px;
-    border: 1px solid rgba(255,255,255,0.15) !important;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease !important;
-}
-
-.btn-tienda:hover {
-    transform: translateY(-3px) !important;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.45) !important;
-    filter: brightness(1.1);
-}
-
-/* Sección de plataformas vacía para libros: ocultar elegantemente */
+.tiendas-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.tiendas-row--book { gap: 10px; margin-top: 4px; }
+.btn-tienda { padding: 10px 20px !important; border-radius: var(--radius-sm) !important; font-size: 0.85rem !important; font-weight: 700 !important; letter-spacing: 0.4px; border: 1px solid rgba(255,255,255,0.15) !important; transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease !important; }
+.btn-tienda:hover { transform: translateY(-3px) !important; box-shadow: 0 8px 20px rgba(0,0,0,0.45) !important; filter: brightness(1.1); }
 .plataformas-container:empty { display: none; }
 
 
@@ -860,7 +840,7 @@ body {
     }
 
     .hero-content {
-        padding: 40px 5% 40px; /* Ajuste también para móvil */
+        padding: 40px 5% 40px; 
         max-width: 100%;
     }
 
