@@ -239,7 +239,9 @@
                 </div>
             </div>
 
-        </div></div>{% endif %}
+        </div>
+    </div>
+    {% endif %}
     {% if trailer and busqueda_activa and not modo_busqueda and not error %}
     <div class="trailer-container">
         <iframe src="https://www.youtube.com/embed/{{ trailer }}?autoplay=0&controls=1"
@@ -280,7 +282,6 @@
 
 
     <script>
-        /* ── Scroll navbar ─────────────────────────────── */
         const navbar = document.getElementById('navbar');
         if (navbar && !navbar.style.position.includes('relative')) {
             window.addEventListener('scroll', () => {
@@ -288,7 +289,6 @@
             }, { passive: true });
         }
 
-        /* ── Auto-scroll al hero ───────────────────────── */
         {% if busqueda_activa and not modo_busqueda %}
         window.addEventListener('load', () => {
             const hero = document.getElementById('hero');
@@ -296,7 +296,6 @@
         });
         {% endif %}
 
-        /* ── Acciones AJAX (pendiente / favorito) ──────── */
         document.querySelectorAll('.form-accion').forEach(form => {
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -318,7 +317,6 @@
             });
         });
 
-        /* ── Dropdowns mobile ──────────────────────────── */
         function toggleDrop(e, id) {
             e.stopPropagation();
             document.querySelectorAll('.dropdown-content').forEach(d => {

@@ -28,30 +28,29 @@ app.include_router(acciones_router)
 
 
 # ══════════════════════════════════════════════════════════════════
-#  GOOGLE BOOKS  →  Libros, Cómics y Manga (En español y sin basura)
+#  GOOGLE BOOKS  →  Libros, Cómics y Manga (Corregido)
 # ══════════════════════════════════════════════════════════════════
 
 def buscar_libros(query: str):
-    """Google Books: busca libros, cómics y manga unificados. Filtro estricto de español."""
-    # Pedimos el máximo de resultados (40) por si tenemos que descartar muchos en inglés
-    url = f"https://www.googleapis.com/books/v1/volumes?q={urllib.parse.quote(query)}&maxResults=40&langRestrict=es"
+    """Google Books: busca libros, cómics y manga unificados."""
+    url = f"https://www.googleapis.com/books/v1/volumes?q={urllib.parse.quote(query)}&maxResults=40"
     try:
         r = requests.get(url, timeout=6).json()
         out = []
         for item in r.get("items", []):
             info = item.get("volumeInfo", {})
             
-            # 1. Filtro de carátula
+            # Exigimos carátula real
             if "imageLinks" not in info or "thumbnail" not in info["imageLinks"]:
                 continue
                 
-            # 2. FILTRO ESTRICTO DE IDIOMA: Si no es explícitamente español, se destruye.
-            if info.get("language") != "es":
+            # NUEVO FILTRO: En lugar de exigir 'es', simplemente bloqueamos si detectamos 'en'
+            lang = info.get("language", "").lower()
+            if lang == "en":
                 continue
                 
             cover = info["imageLinks"]["thumbnail"].replace("http:", "https:").replace("&edge=curl", "")
             
-            # Clasificación automática
             categories = " ".join(info.get("categories", [])).lower()
             if "manga" in categories or "japanese comic" in categories:
                 mt = "manga"
@@ -67,8 +66,6 @@ def buscar_libros(query: str):
                 "poster_url":   cover,
                 "media_type":   mt,
             })
-        
-        # Devolvemos un máximo de 12 para que visualmente encaje perfecto
         return out[:12]
     except Exception as e:
         print("Error Google Books search:", e)
@@ -76,7 +73,6 @@ def buscar_libros(query: str):
 
 
 def obtener_detalles_libro_o_manga(book_id: str, media_type: str):
-    """Google Books: detalles de la obra por ID de volumen."""
     url = f"https://www.googleapis.com/books/v1/volumes/{book_id}"
     try:
         r = requests.get(url, timeout=6).json()
@@ -113,7 +109,6 @@ def obtener_detalles_libro_o_manga(book_id: str, media_type: str):
 
 
 def tiendas_libro(titulo: str, media_type: str):
-    """Devuelve los botones de compra según el tipo de contenido."""
     q = urllib.parse.quote(titulo)
     if media_type == "manga":
         return [
@@ -128,7 +123,7 @@ def tiendas_libro(titulo: str, media_type: str):
             {"nombre": "Casa del Libro","link": f"https://www.casadellibro.com/?q={q}",                          "color": "#009966", "icono": "📚"},
             {"nombre": "FNAC",          "link": f"https://www.fnac.es/SearchResult/ResultList.aspx?Search={q}",  "color": "#E5A800", "icono": "🏪"},
         ]
-    else:  # book
+    else:
         return [
             {"nombre": "Amazon",         "link": f"https://www.amazon.es/s?k={q}+libro",                         "color": "#232F3E", "icono": "🛒"},
             {"nombre": "Casa del Libro", "link": f"https://www.casadellibro.com/?q={q}",                         "color": "#009966", "icono": "📖"},
@@ -407,6 +402,7 @@ async def inicio(
         elif media_type == "tv":
             peli = obtener_detalles_tv(mid)
             if peli and movie_id:
+                # Limitamos a 20 para el carrusel infinito
                 carrusel_pelis  = obtener_similares_tv(mid)[:20]
                 carrusel_titulo = f"Series similares a {peli.get('title')}"
             if peli:
@@ -434,6 +430,7 @@ async def inicio(
         else:
             peli = obtener_detalles_pelicula(mid)
             if peli and movie_id:
+                # Limitamos a 20 para el carrusel infinito
                 carrusel_pelis  = obtener_similares(mid)[:20]
                 carrusel_titulo = f"Películas similares a {peli.get('title')}"
             if peli:
