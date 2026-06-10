@@ -10,12 +10,25 @@
 
     <div class="navbar" id="navbar" {% if modo_busqueda or error %}style="background: rgba(13,13,15,0.98); position: relative; border-bottom: 1px solid var(--border);"{% endif %}>
 
-        <a href="/" class="logo">Recomiendamela</a>
+        <a href="/" class="logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                <line x1="7" y1="2" x2="7" y2="22"></line>
+                <line x1="17" y1="2" x2="17" y2="22"></line>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+                <line x1="2" y1="7" x2="7" y2="7"></line>
+                <line x1="2" y1="17" x2="7" y2="17"></line>
+                <line x1="17" y1="17" x2="22" y2="17"></line>
+                <line x1="17" y1="7" x2="22" y2="7"></line>
+            </svg>
+            RECOMIENDAMELA
+        </a>
 
         {% if user_id %}
             <div class="auth-forms-container">
                 <img src="{{ user_avatar }}" class="nav-avatar" alt="Avatar">
                 <span class="nav-username">{{ username }}</span>
+                <a href="#" class="btn-nav" onclick="abrirAjustes()">⚙️ Ajustes</a>
                 <a href="/perfil" class="btn-nav">Perfil</a>
                 <a href="/auth/logout" class="btn-nav btn-danger">Salir</a>
             </div>
@@ -29,8 +42,9 @@
                 </form>
                 <div class="auth-divider">|</div>
                 <form action="/auth/register" method="post" class="form-login">
-                    <input type="text"     name="username" placeholder="Nuevo usuario" required>
-                    <input type="password" name="password" placeholder="Contraseña"    required>
+                    <input type="email"    name="email"    placeholder="Tu Email (Real)" required>
+                    <input type="text"     name="username" placeholder="Usuario" required>
+                    <input type="password" name="password" placeholder="Contraseña" required>
                     <button type="submit" class="btn-primary" style="background: transparent; border: 1px solid var(--accent);">
                         Registro
                     </button>
@@ -52,8 +66,9 @@
                     <button class="btn-primary btn-drop" style="background:transparent; border:1px solid var(--accent);" onclick="toggleDrop(event,'drop-reg')">Registro ▾</button>
                     <div id="drop-reg" class="dropdown-content" onclick="event.stopPropagation()">
                         <form action="/auth/register" method="post" class="form-login-mob">
-                            <input type="text"     name="username" placeholder="Nuevo usuario" required>
-                            <input type="password" name="password" placeholder="Contraseña"    required>
+                            <input type="email"    name="email"    placeholder="Email real" required>
+                            <input type="text"     name="username" placeholder="Usuario" required>
+                            <input type="password" name="password" placeholder="Contraseña" required>
                             <button type="submit" class="btn-primary" style="width:100%; background:transparent; border:1px solid var(--accent);">Registrarse</button>
                         </form>
                     </div>
@@ -61,6 +76,27 @@
             </div>
         {% endif %}
     </div>
+
+
+    <div class="modal-overlay" id="modalAjustes">
+        <div class="modal-content">
+            <span class="modal-close" onclick="cerrarAjustes()">✖</span>
+            <h2 class="modal-title">Ajustes de Seguridad</h2>
+            <form action="/ajustes/actualizar" method="post">
+                <div class="form-group">
+                    <label>Nuevo Nombre de Usuario</label>
+                    <input type="text" name="nuevo_user" placeholder="Dejar en blanco para no cambiar">
+                </div>
+                <div class="form-group">
+                    <label>Nueva Contraseña</label>
+                    <input type="password" name="nueva_pass" placeholder="Dejar en blanco para no cambiar">
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%;">Guardar Cambios</button>
+            </form>
+        </div>
+    </div>
+
+
     {% if error %}
     <div class="error-busqueda-container">
         <form action="/" method="get" class="search-wrapper" style="width:100%; max-width:560px;">
@@ -70,71 +106,53 @@
         <h1 class="error-title">No se encontró la búsqueda.<br>¿Seguro que se llama así?</h1>
     </div>
     {% endif %}
+
+
     {% if modo_busqueda and not error %}
     <div class="resultados-wrapper">
-
         <div class="search-top">
             <form action="/" method="get" class="search-wrapper">
                 <input type="text" name="query" placeholder="Busca películas, juegos, libros, cómics…" value="{{ query_actual }}" required>
                 <button type="submit" class="btn-primary" style="padding:11px 20px;">🔍</button>
             </form>
         </div>
-
         <p class="resultados-titulo">Resultados para <span>"{{ query_actual }}"</span></p>
-
+        
         {% if resultados_busqueda_cine %}
-        <div class="categoria-header">
-            <div class="categoria-bar cine"></div>
-            <span class="categoria-titulo">🍿 Películas y Series</span>
-        </div>
+        <div class="categoria-header"><div class="categoria-bar cine"></div><span class="categoria-titulo">🍿 Películas y Series</span></div>
         <div class="tendencias-container">
             {% for res in resultados_busqueda_cine %}
                 {% if res.poster_url %}
-                <a href="/?movie_id={{ res.id }}&media_type={{ res.media_type or 'movie' }}" class="item-carrusel" title="{{ res.title }}">
-                    <img src="{{ res.poster_url }}" alt="{{ res.title }}">
-                    <p>{{ res.title }}<span>{{ res.release_date[:4] if res.release_date else '' }}</span></p>
-                </a>
+                <a href="/?movie_id={{ res.id }}&media_type={{ res.media_type or 'movie' }}" class="item-carrusel"><img src="{{ res.poster_url }}"><p>{{ res.title }}</p></a>
                 {% endif %}
             {% endfor %}
         </div>
         {% endif %}
 
         {% if resultados_busqueda_juegos %}
-        <div class="categoria-header">
-            <div class="categoria-bar games"></div>
-            <span class="categoria-titulo">🎮 Videojuegos</span>
-        </div>
+        <div class="categoria-header"><div class="categoria-bar games"></div><span class="categoria-titulo">🎮 Videojuegos</span></div>
         <div class="tendencias-container">
             {% for res in resultados_busqueda_juegos %}
                 {% if res.poster_url %}
-                <a href="/?movie_id={{ res.id }}&media_type={{ res.media_type }}" class="item-carrusel" title="{{ res.title }}">
-                    <img src="{{ res.poster_url }}" alt="{{ res.title }}">
-                    <p>{{ res.title }}<span>{{ res.release_date[:4] if res.release_date else '' }}</span></p>
-                </a>
+                <a href="/?movie_id={{ res.id }}&media_type={{ res.media_type }}" class="item-carrusel"><img src="{{ res.poster_url }}"><p>{{ res.title }}</p></a>
                 {% endif %}
             {% endfor %}
         </div>
         {% endif %}
 
         {% if resultados_busqueda_libros %}
-        <div class="categoria-header">
-            <div class="categoria-bar books"></div>
-            <span class="categoria-titulo">📚 Libros, Cómics y Manga</span>
-        </div>
+        <div class="categoria-header"><div class="categoria-bar books"></div><span class="categoria-titulo">📚 Libros, Cómics y Manga</span></div>
         <div class="tendencias-container">
             {% for res in resultados_busqueda_libros %}
                 {% if res.poster_url %}
-                <a href="/?movie_id={{ res.id }}&media_type=book" class="item-carrusel item-libro" title="{{ res.title }}">
-                    <img src="{{ res.poster_url }}" alt="{{ res.title }}">
-                    <p>{{ res.title }}<span>{{ res.release_date[:4] if res.release_date else '' }}</span></p>
-                </a>
+                <a href="/?movie_id={{ res.id }}&media_type=book" class="item-carrusel item-libro"><img src="{{ res.poster_url }}"><p>{{ res.title }}</p></a>
                 {% endif %}
             {% endfor %}
         </div>
         {% endif %}
-
     </div>
     {% endif %}
+
     {% if peli and not modo_busqueda and not error %}
     <div class="hero-banner {% if media_type == 'book' %}hero-libro{% endif %}" style="background-image: url('{{ peli.backdrop_url or peli.poster_url }}');" id="hero">
         <div class="hero-overlay"></div>
@@ -146,57 +164,34 @@
             </form>
 
             <h1>{{ peli.title }}</h1>
-
             <div class="meta">
-                <div class="meta-rating">
-                    <span class="nota">⭐ {{ peli.vote_average }} / 10</span>
-                    <span class="nota-fuente">{{ peli.fuente_nota or 'IMDb' }}</span>
-                </div>
+                <div class="meta-rating"><span class="nota">⭐ {{ peli.vote_average }} / 10</span><span class="nota-fuente">{{ peli.fuente_nota or 'IMDb' }}</span></div>
                 <span class="meta-year">{{ peli.release_date[:4] if peli.release_date else '' }}</span>
-                {% if media_type == 'tv' %}
-                    <span class="badge-tipo badge-tv">Serie</span>
-                {% elif media_type == 'game' %}
-                    <span class="badge-tipo badge-game">Videojuego</span>
-                {% elif media_type == 'book' %}
-                    <span class="badge-tipo badge-book">📚 Libro / Cómic</span>
-                {% else %}
-                    <span class="badge-tipo badge-movie">Película</span>
-                {% endif %}
+                {% if media_type == 'tv' %}<span class="badge-tipo badge-tv">Serie</span>
+                {% elif media_type == 'game' %}<span class="badge-tipo badge-game">Videojuego</span>
+                {% elif media_type == 'book' %}<span class="badge-tipo badge-book">📚 Libro / Cómic</span>
+                {% else %}<span class="badge-tipo badge-movie">Película</span>{% endif %}
             </div>
 
             <p class="sinopsis">{{ peli.overview or "No hay sinopsis disponible." }}</p>
 
             <div class="acciones">
                 {% if user_id %}
-                    <form action="{% if is_pen %}/accion/pen/remove{% else %}/accion/pen/add{% endif %}"
-                          method="post" class="form-accion" data-type="pen" style="margin:0;">
-                        <input type="hidden" name="movie_id"   value="{{ peli.id }}">
-                        <input type="hidden" name="title"      value="{{ peli.title }}">
-                        <input type="hidden" name="poster_url" value="{{ peli.poster_url }}">
-                        <button type="submit" class="btn-icon btn-pen {% if is_pen %}iluminado{% endif %}">
-                            ▶ {% if is_pen %}¡Recomendada!{% else %}¿Me la recomiendas?{% endif %}
-                        </button>
+                    <form action="{% if is_pen %}/accion/pen/remove{% else %}/accion/pen/add{% endif %}" method="post" class="form-accion" data-type="pen" style="margin:0;">
+                        <input type="hidden" name="movie_id" value="{{ peli.id }}"><input type="hidden" name="title" value="{{ peli.title }}"><input type="hidden" name="poster_url" value="{{ peli.poster_url }}">
+                        <button type="submit" class="btn-icon btn-pen {% if is_pen %}iluminado{% endif %}">▶ {% if is_pen %}¡Recomendada!{% else %}¿Me la recomiendas?{% endif %}</button>
                     </form>
-
+                    
                     {% set prim_genre = peli.genres[0] if peli.genres else None %}
                     {% if prim_genre %}
-                    <form action="{% if is_fav %}/accion/fav/remove{% else %}/accion/fav/add{% endif %}"
-                          method="post" class="form-accion" data-type="fav" style="margin:0;">
-                        <input type="hidden" name="movie_id"   value="{{ peli.id }}">
-                        <input type="hidden" name="title"      value="{{ peli.title }}">
-                        <input type="hidden" name="poster_url" value="{{ peli.poster_url }}">
-                        <input type="hidden" name="genre_id"   value="{{ prim_genre.id }}">
-                        <input type="hidden" name="genre_name" value="{{ prim_genre.name }}">
-                        <button type="submit" class="btn-icon btn-fav {% if is_fav %}iluminado{% endif %}">
-                            ➕ Favorito
-                        </button>
+                    <form action="{% if is_fav %}/accion/fav/remove{% else %}/accion/fav/add{% endif %}" method="post" class="form-accion" data-type="fav" style="margin:0;">
+                        <input type="hidden" name="movie_id" value="{{ peli.id }}"><input type="hidden" name="title" value="{{ peli.title }}"><input type="hidden" name="poster_url" value="{{ peli.poster_url }}"><input type="hidden" name="genre_id" value="{{ prim_genre.id }}"><input type="hidden" name="genre_name" value="{{ prim_genre.name }}">
+                        <button type="submit" class="btn-icon btn-fav {% if is_fav %}iluminado{% endif %}">➕ Favorito</button>
                     </form>
                     {% endif %}
-
                 {% else %}
                     <span class="lock-hint">🔒 Inicia sesión para guardar</span>
                 {% endif %}
-
                 <a href="/foro/{{ peli.id }}" class="btn-icon">💬 Ir al Foro</a>
             </div>
 
@@ -208,15 +203,11 @@
                             <span class="plat-tag">{{ plat }}</span>
                         {% endfor %}
                     </div>
-
                 {% elif plataformas %}
                     <p class="section-label">📺 Disponible en streaming</p>
                     <div class="iconos-plataformas" style="display:flex; gap:10px; flex-wrap:wrap;">
                         {% for plat in plataformas %}
-                            <a href="{{ plat.direct_link }}" target="_blank" title="Ver en {{ plat.provider_name }}">
-                                <img src="https://image.tmdb.org/t/p/w92{{ plat.logo_path }}"
-                                     class="icono-plat" alt="{{ plat.provider_name }}">
-                            </a>
+                            <a href="{{ plat.direct_link }}" target="_blank" title="Ver en {{ plat.provider_name }}"><img src="https://image.tmdb.org/t/p/w92{{ plat.logo_path }}" class="icono-plat" alt="{{ plat.provider_name }}"></a>
                         {% endfor %}
                     </div>
                 {% endif %}
@@ -230,65 +221,49 @@
                 </p>
                 <div class="tiendas-row {% if media_type == 'book' %}tiendas-row--book{% endif %}">
                     {% for pod in podcasts %}
-                        <a href="{{ pod.link }}" target="_blank"
-                           class="btn-plat {% if media_type == 'book' %}btn-tienda{% endif %}"
-                           style="background: {{ pod.color }}; color: white;">
+                        <a href="{{ pod.link }}" target="_blank" class="btn-plat {% if media_type == 'book' %}btn-tienda{% endif %}" style="background: {{ pod.color }}; color: white;">
                             {{ pod.icono }} {{ pod.nombre }}
                         </a>
                     {% endfor %}
                 </div>
             </div>
 
-        </div></div>{% endif %}
-    {% if trailer and busqueda_activa and not modo_busqueda and not error %}
-    <div class="trailer-container">
-        <iframe src="https://www.youtube.com/embed/{{ trailer }}?autoplay=0&controls=1"
-                allowfullscreen loading="lazy"></iframe>
+        </div>
     </div>
     {% endif %}
 
+    {% if trailer and busqueda_activa and not modo_busqueda and not error %}
+    <div class="trailer-container">
+        <iframe src="https://www.youtube.com/embed/{{ trailer }}?autoplay=0&controls=1" allowfullscreen loading="lazy"></iframe>
+    </div>
+    {% endif %}
 
     {% if carrusel_pelis and not modo_busqueda and not error %}
     <div class="seccion-carrusel" {% if not (trailer and busqueda_activa) and not busqueda_activa %}style="margin-top:-60px;"{% endif %}>
-        <div class="carrusel-header">
-            <span class="carrusel-titulo">{{ carrusel_titulo }}</span>
-        </div>
-        
+        <div class="carrusel-header"><span class="carrusel-titulo">{{ carrusel_titulo }}</span></div>
         <div class="carrusel-continuo">
             <div class="carrusel-track">
-                
                 {% for cp in carrusel_pelis %}
-                    {% if cp.poster_url %}
-                    <a href="/?movie_id={{ cp.id }}&media_type={{ cp.media_type or 'movie' }}" class="item-peli" title="{{ cp.title }}">
-                        <img src="{{ cp.poster_url }}" alt="{{ cp.title }}" loading="lazy">
-                    </a>
-                    {% endif %}
+                    {% if cp.poster_url %}<a href="/?movie_id={{ cp.id }}&media_type={{ cp.media_type or 'movie' }}" class="item-peli"><img src="{{ cp.poster_url }}"></a>{% endif %}
                 {% endfor %}
-                
                 {% for cp in carrusel_pelis %}
-                    {% if cp.poster_url %}
-                    <a href="/?movie_id={{ cp.id }}&media_type={{ cp.media_type or 'movie' }}" class="item-peli" title="{{ cp.title }}" aria-hidden="true">
-                        <img src="{{ cp.poster_url }}" alt="{{ cp.title }}" loading="lazy">
-                    </a>
-                    {% endif %}
+                    {% if cp.poster_url %}<a href="/?movie_id={{ cp.id }}&media_type={{ cp.media_type or 'movie' }}" class="item-peli" aria-hidden="true"><img src="{{ cp.poster_url }}"></a>{% endif %}
                 {% endfor %}
-
             </div>
         </div>
     </div>
     {% endif %}
 
-
     <script>
+        function abrirAjustes() { document.getElementById('modalAjustes').style.display = 'flex'; }
+        function cerrarAjustes() { document.getElementById('modalAjustes').style.display = 'none'; }
+
         /* ── Scroll navbar ─────────────────────────────── */
         const navbar = document.getElementById('navbar');
         if (navbar && !navbar.style.position.includes('relative')) {
-            window.addEventListener('scroll', () => {
-                navbar.classList.toggle('scrolled', window.scrollY > 40);
-            }, { passive: true });
+            window.addEventListener('scroll', () => { navbar.classList.toggle('scrolled', window.scrollY > 40); }, { passive: true });
         }
 
-        /* ── Auto-scroll al hero ───────────────────────── */
         {% if busqueda_activa and not modo_busqueda %}
         window.addEventListener('load', () => {
             const hero = document.getElementById('hero');
@@ -296,7 +271,6 @@
         });
         {% endif %}
 
-        /* ── Acciones AJAX (pendiente / favorito) ──────── */
         document.querySelectorAll('.form-accion').forEach(form => {
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -318,13 +292,6 @@
             });
         });
 
-        /* ── Scroll Horizontal Clásico (para perfil) ───── */
-        document.querySelectorAll('.carrusel').forEach(c => {
-            c.addEventListener('wheel', e => {
-                if (e.deltaY !== 0) { e.preventDefault(); c.scrollLeft += e.deltaY; }
-            }, { passive: false });
-        });
-
         /* ── Dropdowns mobile ──────────────────────────── */
         function toggleDrop(e, id) {
             e.stopPropagation();
@@ -341,88 +308,38 @@
         /* ── MAGIA JS: Carrusel Infinito + Manual ──────── */
         const continuo = document.querySelector('.carrusel-continuo');
         if (continuo) {
-            let isDown = false;
-            let startX;
-            let scrollLeftPos;
-            let isHovered = false;
-
-            // Animación automática
+            let isDown = false; let startX; let scrollLeftPos; let isHovered = false;
             function autoScroll() {
                 if (!isDown && !isHovered) {
                     continuo.scrollLeft += 1; 
-                    
-                    // Si llegamos a la mitad exacta (donde empiezan los clones), volvemos a 0
-                    if (continuo.scrollLeft >= continuo.scrollWidth / 2) {
-                        continuo.scrollLeft -= continuo.scrollWidth / 2;
-                    }
+                    if (continuo.scrollLeft >= continuo.scrollWidth / 2) { continuo.scrollLeft -= continuo.scrollWidth / 2; }
                 }
                 requestAnimationFrame(autoScroll);
             }
-
-            // Eventos de ratón para arrastrar manual
-            continuo.addEventListener('mousedown', (e) => {
-                isDown = true;
-                continuo.style.cursor = 'grabbing';
-                startX = e.pageX - continuo.offsetLeft;
-                scrollLeftPos = continuo.scrollLeft;
-            });
-
-            continuo.addEventListener('mouseleave', () => {
-                isDown = false;
-                isHovered = false;
-                continuo.style.cursor = 'grab';
-            });
-
-            continuo.addEventListener('mouseup', () => {
-                isDown = false;
-                continuo.style.cursor = 'grab';
-            });
-
-            continuo.addEventListener('mouseenter', () => {
-                isHovered = true; // Pausa al pasar el ratón
-            });
-
+            continuo.addEventListener('mousedown', (e) => { isDown = true; continuo.style.cursor = 'grabbing'; startX = e.pageX - continuo.offsetLeft; scrollLeftPos = continuo.scrollLeft; });
+            continuo.addEventListener('mouseleave', () => { isDown = false; isHovered = false; continuo.style.cursor = 'grab'; });
+            continuo.addEventListener('mouseup', () => { isDown = false; continuo.style.cursor = 'grab'; });
+            continuo.addEventListener('mouseenter', () => { isHovered = true; });
             continuo.addEventListener('mousemove', (e) => {
-                if (!isDown) return;
-                e.preventDefault();
-                const x = e.pageX - continuo.offsetLeft;
-                const walk = (x - startX) * 1.5; // Velocidad de arrastre
-                continuo.scrollLeft = scrollLeftPos - walk;
-
-                // Bucle infinito mientras arrastramos
+                if (!isDown) return; e.preventDefault(); const x = e.pageX - continuo.offsetLeft; const walk = (x - startX) * 1.5; continuo.scrollLeft = scrollLeftPos - walk;
                 const maxScroll = continuo.scrollWidth / 2;
-                if (continuo.scrollLeft >= maxScroll) {
-                    continuo.scrollLeft -= maxScroll;
-                    scrollLeftPos -= maxScroll;
-                } else if (continuo.scrollLeft <= 0) {
-                    continuo.scrollLeft += maxScroll;
-                    scrollLeftPos += maxScroll;
-                }
+                if (continuo.scrollLeft >= maxScroll) { continuo.scrollLeft -= maxScroll; scrollLeftPos -= maxScroll; } else if (continuo.scrollLeft <= 0) { continuo.scrollLeft += maxScroll; scrollLeftPos += maxScroll; }
             });
-
-            // Permite usar la rueda del ratón de arriba a abajo para mover el carrusel de lado a lado
+            
             continuo.addEventListener('wheel', (e) => {
                 if (e.deltaY !== 0) {
                     e.preventDefault();
                     continuo.scrollLeft += e.deltaY;
-                    
                     const maxScroll = continuo.scrollWidth / 2;
-                    if (continuo.scrollLeft >= maxScroll) {
-                        continuo.scrollLeft -= maxScroll;
-                    } else if (continuo.scrollLeft <= 0) {
-                        continuo.scrollLeft += maxScroll;
-                    }
+                    if (continuo.scrollLeft >= maxScroll) { continuo.scrollLeft -= maxScroll; } else if (continuo.scrollLeft <= 0) { continuo.scrollLeft += maxScroll; }
                 }
             }, { passive: false });
 
-            // Soporte para móviles (Pausar auto-scroll al tocar la pantalla)
             continuo.addEventListener('touchstart', () => isHovered = true, {passive: true});
             continuo.addEventListener('touchend', () => isHovered = false, {passive: true});
-
-            // Iniciar bucle
+            
             requestAnimationFrame(autoScroll);
         }
     </script>
-
 </body>
 </html>
