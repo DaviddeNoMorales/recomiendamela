@@ -28,84 +28,140 @@ app.include_router(acciones_router)
 
 
 # ══════════════════════════════════════════════════════════════════
-#  GOOGLE BOOKS  →  Libros, Cómics y Manga (Corregido)
+#  NUEVO: APPLE BOOKS API  →  Libros y Cómics (Perfecto en español)
 # ══════════════════════════════════════════════════════════════════
 
 def buscar_libros(query: str):
-    """Google Books: busca libros, cómics y manga unificados."""
-    url = f"https://www.googleapis.com/books/v1/volumes?q={urllib.parse.quote(query)}&maxResults=40"
+    """Busca libros y cómics en la tienda de Apple España."""
+    url = f"https://itunes.apple.com/search?term={urllib.parse.quote(query)}&country=es&entity=ebook&limit=12"
     try:
         r = requests.get(url, timeout=6).json()
         out = []
-        for item in r.get("items", []):
-            info = item.get("volumeInfo", {})
-            
-            # Exigimos carátula real
-            if "imageLinks" not in info or "thumbnail" not in info["imageLinks"]:
+        for item in r.get("results", []):
+            # Cambiamos la resolución de la portada a alta calidad
+            cover = item.get("artworkUrl100", "").replace("100x100bb", "600x600bb")
+            if not cover:
                 continue
-                
-            # NUEVO FILTRO: En lugar de exigir 'es', simplemente bloqueamos si detectamos 'en'
-            lang = info.get("language", "").lower()
-            if lang == "en":
-                continue
-                
-            cover = info["imageLinks"]["thumbnail"].replace("http:", "https:").replace("&edge=curl", "")
-            
-            categories = " ".join(info.get("categories", [])).lower()
-            if "manga" in categories or "japanese comic" in categories:
-                mt = "manga"
-            elif "comic" in categories or "graphic novel" in categories or "superhero" in categories:
-                mt = "comic"
-            else:
-                mt = "book"
                 
             out.append({
-                "id":           item["id"],
-                "title":        info.get("title", "Sin título"),
-                "release_date": str(info.get("publishedDate", ""))[:4],
-                "poster_url":   cover,
-                "media_type":   mt,
+                "id": str(item.get("trackId")),
+                "title": item.get("trackName", "Sin título"),
+                "release_date": str(item.get("releaseDate", ""))[:4],
+                "poster_url": cover,
+                "media_type": "book"
             })
-        return out[:12]
+        return out
     except Exception as e:
-        print("Error Google Books search:", e)
+        print("Error Apple Books search:", e)
         return []
 
-
-def obtener_detalles_libro_o_manga(book_id: str, media_type: str):
-    url = f"https://www.googleapis.com/books/v1/volumes/{book_id}"
+def obtener_detalles_libro(book_id: str):
+    url = f"https://itunes.apple.com/lookup?id={book_id}&country=es"
     try:
         r = requests.get(url, timeout=6).json()
-        if "volumeInfo" not in r:
+        if not r.get("results"):
             return None
             
-        info = r["volumeInfo"]
+        item = r["results"][0]
+        cover = item.get("artworkUrl100", "").replace("100x100bb", "600x600bb")
         
-        cover = None
-        if "imageLinks" in info and "thumbnail" in info["imageLinks"]:
-            cover = info["imageLinks"]["thumbnail"].replace("http:", "https:").replace("&edge=curl", "")
-            
-        desc = info.get("description", "No hay sinopsis disponible.")
-        if isinstance(desc, dict):
-            desc = desc.get("value", "No hay sinopsis disponible.")
-            
-        vote_avg = round(info.get("averageRating", 0) * 2, 1)
+        # Limpiar etiquetas HTML feas que a veces vienen en la sinopsis
+        desc_html = item.get("description", "No hay sinopsis disponible.")
+        desc_limpia = re.sub('<[^<]+>', '', desc_html)
+        
+        vote_avg = round(item.get("averageUserRating", 0) * 2, 1) # Apple es sobre 5, lo pasamos a 10
 
         return {
-            "id":           book_id,
-            "title":        info.get("title", "Sin título"),
-            "overview":     desc,
+            "id": book_id,
+            "title": item.get("trackName", "Sin título"),
+            "overview": desc_limpia,
             "vote_average": vote_avg,
-            "fuente_nota":  "Google Books",
-            "release_date": str(info.get("publishedDate", ""))[:4],
-            "media_type":   media_type,
-            "poster_url":   cover,
+            "fuente_nota": "Apple Books",
+            "release_date": str(item.get("releaseDate", ""))[:4],
+            "media_type": "book",
+            "poster_url": cover,
             "backdrop_url": cover,
-            "genres":       [{"name": g} for g in info.get("categories", [])]
+            "genres": [{"name": g} for g in item.get("genres", [])]
         }
     except Exception as e:
-        print("Error Google Books details:", e)
+        print("Error Apple Books details:", e)
         return None
+
+
+# ══════════════════════════════════════════════════════════════════
+#  NUEVO: JIKAN API (MyAnimeList)  →  Manga 
+# ══════════════════════════════════════════════════════════════════
+
+def buscar_manga(query: str):
+    """Busca manga en MyAnimeList (Jikan). Garantiza portadas de calidad."""
+    url = f"https://api.jikan.moe/v4/manga?q={urllib.parse.quote(query)}&limit=10"
+    try:
+        r = requests.get(url, timeout=6).json()
+        out = []
+        for item in r.get("data", []):
+            cover = item.get("images", {}).get("jpg", {}).get("large_image_url")
+            if not cover:
+                continue
+                
+            # Jikan a veces trae el título en español si existe, si no, usa el general
+            title = item.get("title_spanish") or item.get("title", "Sin título")
+            
+            # Año de publicación
+            year = ""
+            published = item.get("published", {}).get("prop", {}).get("from", {})
+            if published and published.get("year"):
+                year = str(published.get("year"))
+
+            out.append({
+                "id": f"jikan_{item['mal_id']}",
+                "title": title,
+                "release_date": year,
+                "poster_url": cover,
+                "media_type": "manga"
+            })
+        return out
+    except Exception as e:
+        print("Error Jikan Manga search:", e)
+        return []
+
+def obtener_detalles_manga(manga_id: str):
+    real_id = manga_id.replace("jikan_", "")
+    url = f"https://api.jikan.moe/v4/manga/{real_id}"
+    try:
+        r = requests.get(url, timeout=6).json()
+        item = r.get("data")
+        if not item: return None
+        
+        cover = item.get("images", {}).get("jpg", {}).get("large_image_url")
+        title = item.get("title_spanish") or item.get("title", "Sin título")
+        
+        year = ""
+        published = item.get("published", {}).get("prop", {}).get("from", {})
+        if published and published.get("year"):
+            year = str(published.get("year"))
+
+        return {
+            "id": manga_id,
+            "title": title,
+            "overview": item.get("synopsis", "No hay sinopsis disponible."),
+            "vote_average": round(item.get("score", 0) or 0, 1),
+            "fuente_nota": "MyAnimeList",
+            "release_date": year,
+            "media_type": "manga",
+            "poster_url": cover,
+            "backdrop_url": cover,
+            "genres": [{"name": g.get("name")} for g in item.get("genres", [])]
+        }
+    except Exception as e:
+        print("Error Jikan details:", e)
+        return None
+
+
+def obtener_detalles_libro_o_manga(mid: str, media_type: str):
+    """Dispatcher: Redirige a Apple (Libros) o Jikan (Manga) según el ID"""
+    if mid.startswith("jikan_"):
+        return obtener_detalles_manga(mid)
+    return obtener_detalles_libro(mid)
 
 
 def tiendas_libro(titulo: str, media_type: str):
@@ -343,7 +399,9 @@ async def inicio(
             )
 
         resultados_busqueda_juegos = buscar_videojuegos(query)
-        resultados_busqueda_libros = buscar_libros(query)
+        
+        # Combinamos Apple Books y Jikan (Manga) en la misma fila
+        resultados_busqueda_libros = buscar_libros(query) + buscar_manga(query)
 
         if not resultados_busqueda_cine and not resultados_busqueda_juegos and not resultados_busqueda_libros:
             error = True
@@ -402,7 +460,6 @@ async def inicio(
         elif media_type == "tv":
             peli = obtener_detalles_tv(mid)
             if peli and movie_id:
-                # Limitamos a 20 para el carrusel infinito
                 carrusel_pelis  = obtener_similares_tv(mid)[:20]
                 carrusel_titulo = f"Series similares a {peli.get('title')}"
             if peli:
@@ -430,7 +487,6 @@ async def inicio(
         else:
             peli = obtener_detalles_pelicula(mid)
             if peli and movie_id:
-                # Limitamos a 20 para el carrusel infinito
                 carrusel_pelis  = obtener_similares(mid)[:20]
                 carrusel_titulo = f"Películas similares a {peli.get('title')}"
             if peli:
