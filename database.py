@@ -1,13 +1,13 @@
 import os
-import psycopg2
-from psycopg2.extras import RealDictCursor
+import psycopg
+from psycopg.rows import dict_row
 
 # Recupera la URL de la base de datos desde las variables de entorno de Render
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 class PgConnectionWrapper:
     """
-    Este envoltorio simula el comportamiento de SQLite para PostgreSQL.
+    Este envoltorio simula el comportamiento de SQLite para PostgreSQL usando el moderno Psycopg 3.
     Traduce automáticamente los '?' a '%s' para que no tengas que reescribir tus rutas.
     """
     def __init__(self, conn):
@@ -16,7 +16,9 @@ class PgConnectionWrapper:
     def execute(self, query, params=None):
         # Convertimos la sintaxis de variables
         pg_query = query.replace('?', '%s')
-        cursor = self.conn.cursor(cursor_factory=RealDictCursor)
+        
+        # En psycopg 3, el formato de diccionario se pide al crear el cursor
+        cursor = self.conn.cursor(row_factory=dict_row)
         
         if params:
             cursor.execute(pg_query, params)
@@ -35,7 +37,7 @@ def get_db_connection():
     if not DATABASE_URL:
         raise ValueError("CRÍTICO: No se ha configurado la variable de entorno DATABASE_URL.")
     
-    conn = psycopg2.connect(DATABASE_URL)
+    conn = psycopg.connect(DATABASE_URL)
     return PgConnectionWrapper(conn)
 
 def inicializar_db():
@@ -43,7 +45,7 @@ def inicializar_db():
         print("Aviso: DATABASE_URL no detectada. Omitiendo inicialización de PostgreSQL.")
         return
 
-    conn = psycopg2.connect(DATABASE_URL)
+    conn = psycopg.connect(DATABASE_URL)
     c = conn.cursor()
     
     # 1. Tabla de Usuarios
@@ -97,4 +99,4 @@ def inicializar_db():
     
     conn.commit()
     conn.close()
-    print("PostgreSQL inicializado correctamente.")
+    print("PostgreSQL inicializado correctamente con Psycopg 3.")
