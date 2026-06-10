@@ -45,8 +45,8 @@ def buscar_libros(query: str):
         r = requests.get(
             "https://openlibrary.org/search.json",
             params={
-                "q":      query,
-                "limit":  15,
+                "q":      f"{query} language:spa", # Forzamos idioma español
+                "limit":  20, # Ampliamos el límite por si descartamos algunos
                 "fields": "key,title,first_publish_year,cover_i,author_name,subject",
             },
             timeout=6,
@@ -153,10 +153,11 @@ def buscar_manga(query: str):
             f"{MDX_BASE}/manga",
             params={
                 "title":                         query,
-                "limit":                         12,
+                "limit":                         20, # Aumentamos límite para filtrar
                 "includes[]":                    "cover_art",
                 "contentRating[]":               ["safe", "suggestive"],
-                "availableTranslatedLanguage[]": ["es", "en"],
+                "availableTranslatedLanguage[]": ["es", "es-la"], # Forzamos español y latino
+                "hasAvailableChapters":          "true", # Filtramos placeholders vacíos
             },
             timeout=7,
         ).json()
@@ -167,10 +168,13 @@ def buscar_manga(query: str):
             attrs = item.get("attributes", {})
             rels  = item.get("relationships", [])
             cover = _mdx_cover(mid, rels)
-            if not cover:
+            
+            # FILTRO: Evitamos portadas vacías o placeholders genéricos de MangaDex
+            if not cover or "default" in cover.lower() or "pixel" in cover.lower():
                 continue
+                
             titles = attrs.get("title", {})
-            title  = titles.get("es") or titles.get("en") or next(iter(titles.values()), "Sin título")
+            title  = titles.get("es") or titles.get("es-la") or titles.get("en") or next(iter(titles.values()), "Sin título")
             year   = str(attrs.get("year", "")) if attrs.get("year") else ""
             out.append({
                 "id":           f"mdx_{mid}",
@@ -179,7 +183,7 @@ def buscar_manga(query: str):
                 "poster_url":   cover,
                 "media_type":   "manga",
             })
-        return out
+        return out[:12]
     except Exception as e:
         print("Error MangaDex search:", e)
         return []
@@ -199,10 +203,10 @@ def obtener_detalles_manga(manga_id: str):
         rels  = item.get("relationships", [])
 
         titles = attrs.get("title", {})
-        title  = titles.get("es") or titles.get("en") or next(iter(titles.values()), "Sin título")
+        title  = titles.get("es") or titles.get("es-la") or titles.get("en") or next(iter(titles.values()), "Sin título")
 
         descs = attrs.get("description", {})
-        desc  = descs.get("es") or descs.get("en") or "No hay sinopsis disponible."
+        desc  = descs.get("es") or descs.get("es-la") or descs.get("en") or "No hay sinopsis disponible."
 
         cover = _mdx_cover(manga_id, rels)
 

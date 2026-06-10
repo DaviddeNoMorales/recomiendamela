@@ -622,11 +622,11 @@ body {
 
 .item-carrusel img {
     width: 100%;
-    border-radius: var(--radius-md);
-    display: block;
     aspect-ratio: 2/3;
-    object-fit: cover;
+    object-fit: cover; /* Garantiza que las portadas no se deformen y llenen el hueco */
+    border-radius: var(--radius-md);
     border: 1px solid var(--border);
+    display: block;
     transition: border-color var(--transition);
 }
 
