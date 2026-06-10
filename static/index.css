@@ -596,6 +596,7 @@ body {
 
 .categoria-bar.cine { background: var(--accent); }
 .categoria-bar.games { background: var(--accent-game); }
+.categoria-bar.books { background: #e8a020; }
 
 .categoria-titulo {
     font-size: 1.1rem;
@@ -623,7 +624,7 @@ body {
 .item-carrusel img {
     width: 100%;
     aspect-ratio: 2/3;
-    object-fit: cover; /* Garantiza que las portadas no se deformen y llenen el hueco */
+    object-fit: cover;
     border-radius: var(--radius-md);
     border: 1px solid var(--border);
     display: block;
@@ -667,7 +668,7 @@ body {
 }
 
 /* ============================================================
-   CARRUSEL
+   CARRUSEL AUTOMÁTICO INFINITO (MARQUESINA)
    ============================================================ */
 .seccion-carrusel {
     padding: 0 0 48px;
@@ -687,13 +688,34 @@ body {
     color: var(--text);
 }
 
-.carrusel {
+/* Contenedor que oculta todo lo que sale por los lados */
+.carrusel-continuo {
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    padding: 6px 0 12px;
+}
+
+/* Pista que se mueve automáticamente. 
+   La animación "scroll-infinito" dura 40s. 
+   Al pasar el ratón, se pausa (paused) */
+.carrusel-track {
     display: flex;
     gap: 12px;
-    padding: 6px 5% 12px;
-    overflow-x: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--surface-2) transparent;
+    width: max-content;
+    animation: scroll-infinito 40s linear infinite;
+    padding-left: 5%; /* Margen izquierdo inicial para que coincida con el diseño general */
+}
+
+.carrusel-track:hover {
+    animation-play-state: paused;
+}
+
+/* La animación desplaza el carrusel un 50% de su tamaño total a la izquierda.
+   Al llegar ahí, vuelve a empezar sin que el ojo humano lo note, porque están clonados. */
+@keyframes scroll-infinito {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(calc(-50% - 6px)); }
 }
 
 .item-peli {
@@ -782,9 +804,6 @@ body {
 /* ============================================================
    LIBROS / CÓMICS / MANGA
    ============================================================ */
-
-/* Barra de categoría en resultados */
-.categoria-bar.books { background: #e8a020; }
 
 /* Badge en el hero */
 .badge-book {

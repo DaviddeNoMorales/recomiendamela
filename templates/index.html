@@ -70,7 +70,7 @@
         <h1 class="error-title">No se encontró la búsqueda.<br>¿Seguro que se llama así?</h1>
     </div>
     {% endif %}
-    {% if modo_busqueda %}
+    {% if modo_busqueda and not error %}
     <div class="resultados-wrapper">
 
         <div class="search-top">
@@ -253,14 +253,27 @@
         <div class="carrusel-header">
             <span class="carrusel-titulo">{{ carrusel_titulo }}</span>
         </div>
-        <div class="carrusel">
-            {% for cp in carrusel_pelis %}
-                {% if cp.poster_url %}
-                <a href="/?movie_id={{ cp.id }}&media_type={{ cp.media_type or 'movie' }}" class="item-peli" title="{{ cp.title }}">
-                    <img src="{{ cp.poster_url }}" alt="{{ cp.title }}" loading="lazy">
-                </a>
-                {% endif %}
-            {% endfor %}
+        
+        <div class="carrusel-continuo">
+            <div class="carrusel-track">
+                
+                {% for cp in carrusel_pelis %}
+                    {% if cp.poster_url %}
+                    <a href="/?movie_id={{ cp.id }}&media_type={{ cp.media_type or 'movie' }}" class="item-peli" title="{{ cp.title }}">
+                        <img src="{{ cp.poster_url }}" alt="{{ cp.title }}" loading="lazy">
+                    </a>
+                    {% endif %}
+                {% endfor %}
+                
+                {% for cp in carrusel_pelis %}
+                    {% if cp.poster_url %}
+                    <a href="/?movie_id={{ cp.id }}&media_type={{ cp.media_type or 'movie' }}" class="item-peli" title="{{ cp.title }}" aria-hidden="true">
+                        <img src="{{ cp.poster_url }}" alt="{{ cp.title }}" loading="lazy">
+                    </a>
+                    {% endif %}
+                {% endfor %}
+
+            </div>
         </div>
     </div>
     {% endif %}
@@ -303,13 +316,6 @@
                     }
                 } catch (err) { console.error(err); }
             });
-        });
-
-        /* ── Horizontal scroll con rueda ──────────────── */
-        document.querySelectorAll('.carrusel').forEach(c => {
-            c.addEventListener('wheel', e => {
-                if (e.deltaY !== 0) { e.preventDefault(); c.scrollLeft += e.deltaY; }
-            }, { passive: false });
         });
 
         /* ── Dropdowns mobile ──────────────────────────── */

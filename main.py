@@ -28,236 +28,88 @@ app.include_router(acciones_router)
 
 
 # ══════════════════════════════════════════════════════════════════
-#  OPEN LIBRARY  →  libros y cómics (sin clave, 36M+ títulos)
-#  https://openlibrary.org/dev/docs/api
+#  GOOGLE BOOKS  →  Libros, Cómics y Manga (En español y sin basura)
 # ══════════════════════════════════════════════════════════════════
-
-OPENLIBRARY_COVERS = "https://covers.openlibrary.org/b/id/{}-M.jpg"
-
-
-def _ol_cover(cover_i):
-    return OPENLIBRARY_COVERS.format(cover_i) if cover_i and int(cover_i) > 0 else None
-
 
 def buscar_libros(query: str):
-    """Open Library: busca libros y cómics. Sin API key."""
+    """Google Books: busca libros, cómics y manga unificados. Filtro estricto de español."""
+    # Pedimos el máximo de resultados (40) por si tenemos que descartar muchos en inglés
+    url = f"https://www.googleapis.com/books/v1/volumes?q={urllib.parse.quote(query)}&maxResults=40&langRestrict=es"
     try:
-        # PRIMER INTENTO: Forzar resultados en español
-        r = requests.get(
-            "https://openlibrary.org/search.json",
-            params={
-                "q":      f"{query} language:spa",
-                "limit":  20,
-                "fields": "key,title,first_publish_year,cover_i,author_name,subject",
-            },
-            timeout=6,
-        ).json()
-
-        docs = r.get("docs", [])
-        
-        # SEGUNDO INTENTO: Si no hay resultados en español, buscamos general
-        if not docs:
-            r = requests.get(
-                "https://openlibrary.org/search.json",
-                params={
-                    "q":      query,
-                    "limit":  20,
-                    "fields": "key,title,first_publish_year,cover_i,author_name,subject",
-                },
-                timeout=6,
-            ).json()
-            docs = r.get("docs", [])
-
+        r = requests.get(url, timeout=6).json()
         out = []
-        for doc in docs:
-            cover = _ol_cover(doc.get("cover_i"))
-            if not cover:
-                continue
-            subjects  = " ".join(s.lower() for s in doc.get("subject", []))
-            is_comic  = any(w in subjects for w in ["comic", "graphic novel", "superhero", "comics"])
-            work_id   = doc["key"].replace("/works/", "")
-            out.append({
-                "id":           work_id,
-                "title":        doc.get("title", "Sin título"),
-                "release_date": str(doc.get("first_publish_year", "")),
-                "poster_url":   cover,
-                "media_type":   "comic" if is_comic else "book",
-            })
-        return out[:12]
-    except Exception as e:
-        print("Error Open Library search:", e)
-        return []
-
-
-def obtener_detalles_libro(work_id: str):
-    """Open Library: detalles de una obra por OLxxxW."""
-    try:
-        r = requests.get(f"https://openlibrary.org/works/{work_id}.json", timeout=6).json()
-        if "title" not in r:
-            return None
-
-        desc = r.get("description", "")
-        if isinstance(desc, dict):
-            desc = desc.get("value", "")
-
-        covers    = r.get("covers", [])
-        cover_url = _ol_cover(covers[0]) if covers else None
-
-        # Año de la 1ª edición
-        first_year = ""
-        try:
-            ed = requests.get(
-                f"https://openlibrary.org/works/{work_id}/editions.json?limit=1",
-                timeout=4,
-            ).json()
-            entries = ed.get("entries", [])
-            if entries:
-                first_year = str(entries[0].get("publish_date", ""))[-4:]
-        except Exception:
-            pass
-
-        subjects  = " ".join(
-            (s if isinstance(s, str) else s.get("name", "")).lower()
-            for s in r.get("subjects", [])
-        )
-        if any(w in subjects for w in ["comic", "graphic novel", "superhero", "marvel", "dc comics"]):
-            mt = "comic"
-        elif any(w in subjects for w in ["manga", "japanese comic"]):
-            mt = "manga"
-        else:
-            mt = "book"
-
-        return {
-            "id":           work_id,
-            "title":        r.get("title", "Sin título"),
-            "overview":     desc or "No hay sinopsis disponible.",
-            "vote_average": 0,
-            "fuente_nota":  "Open Library",
-            "release_date": first_year,
-            "media_type":   mt,
-            "poster_url":   cover_url,
-            "backdrop_url": cover_url,
-            "genres":       [],
-        }
-    except Exception as e:
-        print("Error Open Library details:", e)
-        return None
-
-
-# ══════════════════════════════════════════════════════════════════
-#  MANGADEX  →  manga (sin clave para búsquedas de solo lectura)
-#  https://api.mangadex.org/docs
-# ══════════════════════════════════════════════════════════════════
-
-MDX_BASE   = "https://api.mangadex.org"
-MDX_COVERS = "https://uploads.mangadex.org/covers/{mid}/{fname}"
-
-
-def _mdx_cover(manga_id: str, rels: list):
-    for rel in rels:
-        if rel.get("type") == "cover_art":
-            fname = rel.get("attributes", {}).get("fileName")
-            if fname:
-                return MDX_COVERS.format(mid=manga_id, fname=fname)
-    return None
-
-
-def buscar_manga(query: str):
-    """MangaDex: busca manga. Sin API key."""
-    try:
-        r = requests.get(
-            f"{MDX_BASE}/manga",
-            params={
-                "title":                         query,
-                "limit":                         20,
-                "includes[]":                    "cover_art",
-                "contentRating[]":               ["safe", "suggestive"],
-                "availableTranslatedLanguage[]": ["es", "es-la"], # Forzamos español/latino
-                "hasAvailableChapters":          "true", # FILTRO: Evita mangas vacíos
-            },
-            timeout=7,
-        ).json()
-
-        out = []
-        for item in r.get("data", []):
-            mid   = item["id"]
-            attrs = item.get("attributes", {})
-            rels  = item.get("relationships", [])
-            cover = _mdx_cover(mid, rels)
+        for item in r.get("items", []):
+            info = item.get("volumeInfo", {})
             
-            # FILTRO ESTRICTO: Ignoramos las portadas vacías o los placeholders feos de MangaDex
-            if not cover or "default" in cover.lower() or "pixel" in cover.lower() or "placeholder" in cover.lower():
+            # 1. Filtro de carátula
+            if "imageLinks" not in info or "thumbnail" not in info["imageLinks"]:
                 continue
                 
-            titles = attrs.get("title", {})
-            title  = titles.get("es") or titles.get("es-la") or titles.get("en") or next(iter(titles.values()), "Sin título")
-            year   = str(attrs.get("year", "")) if attrs.get("year") else ""
+            # 2. FILTRO ESTRICTO DE IDIOMA: Si no es explícitamente español, se destruye.
+            if info.get("language") != "es":
+                continue
+                
+            cover = info["imageLinks"]["thumbnail"].replace("http:", "https:").replace("&edge=curl", "")
+            
+            # Clasificación automática
+            categories = " ".join(info.get("categories", [])).lower()
+            if "manga" in categories or "japanese comic" in categories:
+                mt = "manga"
+            elif "comic" in categories or "graphic novel" in categories or "superhero" in categories:
+                mt = "comic"
+            else:
+                mt = "book"
+                
             out.append({
-                "id":           f"mdx_{mid}",
-                "title":        title,
-                "release_date": year,
+                "id":           item["id"],
+                "title":        info.get("title", "Sin título"),
+                "release_date": str(info.get("publishedDate", ""))[:4],
                 "poster_url":   cover,
-                "media_type":   "manga",
+                "media_type":   mt,
             })
+        
+        # Devolvemos un máximo de 12 para que visualmente encaje perfecto
         return out[:12]
     except Exception as e:
-        print("Error MangaDex search:", e)
+        print("Error Google Books search:", e)
         return []
 
 
-def obtener_detalles_manga(manga_id: str):
-    """MangaDex: detalles de un manga por UUID."""
+def obtener_detalles_libro_o_manga(book_id: str, media_type: str):
+    """Google Books: detalles de la obra por ID de volumen."""
+    url = f"https://www.googleapis.com/books/v1/volumes/{book_id}"
     try:
-        r = requests.get(
-            f"{MDX_BASE}/manga/{manga_id}",
-            params={"includes[]": "cover_art"},
-            timeout=7,
-        ).json()
-
-        item  = r.get("data", {})
-        attrs = item.get("attributes", {})
-        rels  = item.get("relationships", [])
-
-        titles = attrs.get("title", {})
-        title  = titles.get("es") or titles.get("es-la") or titles.get("en") or next(iter(titles.values()), "Sin título")
-
-        descs = attrs.get("description", {})
-        desc  = descs.get("es") or descs.get("es-la") or descs.get("en") or "No hay sinopsis disponible."
-
-        cover = _mdx_cover(manga_id, rels)
-
-        vote_avg = 0
-        try:
-            stats   = requests.get(f"{MDX_BASE}/statistics/manga/{manga_id}", timeout=4).json()
-            rating  = stats.get("statistics", {}).get(manga_id, {}).get("rating", {})
-            vote_avg = round(rating.get("bayesian", 0), 1)
-        except Exception:
-            pass
-
-        year = str(attrs.get("year", "")) if attrs.get("year") else ""
+        r = requests.get(url, timeout=6).json()
+        if "volumeInfo" not in r:
+            return None
+            
+        info = r["volumeInfo"]
+        
+        cover = None
+        if "imageLinks" in info and "thumbnail" in info["imageLinks"]:
+            cover = info["imageLinks"]["thumbnail"].replace("http:", "https:").replace("&edge=curl", "")
+            
+        desc = info.get("description", "No hay sinopsis disponible.")
+        if isinstance(desc, dict):
+            desc = desc.get("value", "No hay sinopsis disponible.")
+            
+        vote_avg = round(info.get("averageRating", 0) * 2, 1)
 
         return {
-            "id":           manga_id,
-            "title":        title,
+            "id":           book_id,
+            "title":        info.get("title", "Sin título"),
             "overview":     desc,
             "vote_average": vote_avg,
-            "fuente_nota":  "MangaDex",
-            "release_date": year,
-            "media_type":   "manga",
+            "fuente_nota":  "Google Books",
+            "release_date": str(info.get("publishedDate", ""))[:4],
+            "media_type":   media_type,
             "poster_url":   cover,
             "backdrop_url": cover,
-            "genres":       [],
+            "genres":       [{"name": g} for g in info.get("categories", [])]
         }
     except Exception as e:
-        print("Error MangaDex details:", e)
+        print("Error Google Books details:", e)
         return None
-
-
-def obtener_detalles_libro_o_manga(mid: str, media_type: str):
-    """Dispatcher: OLxxxW → Open Library, mdx_<uuid> → MangaDex."""
-    if mid.startswith("mdx_"):
-        return obtener_detalles_manga(mid[4:])
-    return obtener_detalles_libro(mid)
 
 
 def tiendas_libro(titulo: str, media_type: str):
@@ -267,7 +119,6 @@ def tiendas_libro(titulo: str, media_type: str):
         return [
             {"nombre": "Amazon",        "link": f"https://www.amazon.es/s?k={q}+manga",                         "color": "#232F3E", "icono": "🛒"},
             {"nombre": "Norma Cómics",  "link": f"https://www.normacomics.com/catalogsearch/result/?q={q}",      "color": "#D42B2B", "icono": "🥷"},
-            {"nombre": "MangaDex",      "link": f"https://mangadex.org/search?q={q}",                            "color": "#FF6740", "icono": "📖"},
             {"nombre": "Planet Manga",  "link": f"https://www.panini.es/shp_esp_es/catalogsearch/result/?q={q}", "color": "#0057A8", "icono": "🌐"},
         ]
     elif media_type == "comic":
@@ -293,7 +144,6 @@ def tiendas_libro(titulo: str, media_type: str):
 IGDB_TOKEN        = None
 IGDB_TOKEN_EXPIRY = 0
 
-
 def get_igdb_token():
     global IGDB_TOKEN, IGDB_TOKEN_EXPIRY
     if time.time() < IGDB_TOKEN_EXPIRY and IGDB_TOKEN:
@@ -314,7 +164,6 @@ def get_igdb_token():
     except Exception as e:
         print("Error IGDB token:", e)
         return None
-
 
 def buscar_videojuegos(query: str):
     token     = get_igdb_token()
@@ -341,7 +190,6 @@ def buscar_videojuegos(query: str):
     except Exception as e:
         print("Error IGDB search:", e)
         return []
-
 
 def obtener_detalles_videojuego(game_id: str):
     token     = get_igdb_token()
@@ -394,7 +242,6 @@ def obtener_nota_imdb(imdb_id: str):
         print(f"Error IMDb rating {imdb_id}:", e)
     return None
 
-
 def buscar_multimedia(query: str):
     api_key = os.getenv("API_KEY")
     try:
@@ -406,7 +253,6 @@ def buscar_multimedia(query: str):
     except Exception as e:
         print("Error TMDB search:", e)
         return []
-
 
 def obtener_detalles_tv(tv_id: str):
     api_key = os.getenv("API_KEY")
@@ -424,7 +270,6 @@ def obtener_detalles_tv(tv_id: str):
         pass
     return None
 
-
 def obtener_similares_tv(tv_id: str):
     api_key = os.getenv("API_KEY")
     try:
@@ -439,7 +284,6 @@ def obtener_similares_tv(tv_id: str):
         return results
     except Exception:
         return []
-
 
 def obtener_enlace_directo(plataforma, titulo):
     q     = urllib.parse.quote(titulo)
@@ -476,7 +320,7 @@ async def inicio(
 
     resultados_busqueda_cine   = []
     resultados_busqueda_juegos = []
-    resultados_busqueda_libros = []   # libros + cómics + manga combinados
+    resultados_busqueda_libros = [] 
     modo_busqueda = False
 
     podcasts_links = []
@@ -504,9 +348,7 @@ async def inicio(
             )
 
         resultados_busqueda_juegos = buscar_videojuegos(query)
-
-        # Open Library (libros/cómics) + MangaDex (manga) unificados
-        resultados_busqueda_libros = buscar_libros(query) + buscar_manga(query)
+        resultados_busqueda_libros = buscar_libros(query)
 
         if not resultados_busqueda_cine and not resultados_busqueda_juegos and not resultados_busqueda_libros:
             error = True
@@ -521,13 +363,13 @@ async def inicio(
             conn.close()
             if favs:
                 genre_ids       = [str(f["genre_id"]) for f in favs[:3]]
-                carrusel_pelis  = descubrir_por_generos(genre_ids)
+                carrusel_pelis  = descubrir_por_generos(genre_ids)[:20]
                 carrusel_titulo = "Recomendado para ti"
             else:
-                carrusel_pelis  = descubrir_por_generos(["27", "14"])
+                carrusel_pelis  = descubrir_por_generos(["27", "14"])[:20]
                 carrusel_titulo = "Nuestra selección para empezar"
         else:
-            carrusel_pelis  = obtener_populares()
+            carrusel_pelis  = obtener_populares()[:20]
             carrusel_titulo = "Tendencias Mundiales"
 
         for cp in carrusel_pelis:
@@ -552,13 +394,12 @@ async def inicio(
                     {"nombre": "YouTube",            "link": f"https://www.youtube.com/results?search_query={tu}+gameplay", "color": "#FF0000", "icono": "▶️"},
                 ]
 
-        # ── Libro / Cómic / Manga (OLxxxW o mdx_uuid) ──
+        # ── Libro / Cómic / Manga ──
         elif media_type in ("book", "comic", "manga"):
             peli            = obtener_detalles_libro_o_manga(mid, media_type)
             carrusel_pelis  = []
             carrusel_titulo = ""
             if peli:
-                # El tipo real puede venir del propio objeto (Open Library lo detecta)
                 media_type     = peli.get("media_type", media_type)
                 podcasts_links = tiendas_libro(peli["title"], media_type)
 
@@ -566,7 +407,7 @@ async def inicio(
         elif media_type == "tv":
             peli = obtener_detalles_tv(mid)
             if peli and movie_id:
-                carrusel_pelis  = obtener_similares_tv(mid)
+                carrusel_pelis  = obtener_similares_tv(mid)[:20]
                 carrusel_titulo = f"Series similares a {peli.get('title')}"
             if peli:
                 peli["poster_url"]   = f"https://image.tmdb.org/t/p/w500{peli['poster_path']}"   if peli.get("poster_path")   else None
@@ -593,7 +434,7 @@ async def inicio(
         else:
             peli = obtener_detalles_pelicula(mid)
             if peli and movie_id:
-                carrusel_pelis  = obtener_similares(mid)
+                carrusel_pelis  = obtener_similares(mid)[:20]
                 carrusel_titulo = f"Películas similares a {peli.get('title')}"
             if peli:
                 peli["poster_url"]   = f"https://image.tmdb.org/t/p/w500{peli['poster_path']}"   if peli.get("poster_path")   else None
@@ -616,7 +457,6 @@ async def inicio(
                         trailer = v["key"]
                         break
 
-        # Estado BD
         if peli and user_id:
             conn   = get_db_connection()
             is_fav = bool(conn.execute("SELECT id FROM favoritos  WHERE user_id=? AND movie_id=?", (user_id, mid)).fetchone())
@@ -649,9 +489,7 @@ async def inicio(
         },
     )
 
-
 def _procesar_plataformas(watch_data: dict, titulo: str) -> list:
-    """Deduplicar y normalizar plataformas de streaming de TMDB."""
     plataformas_crudas = watch_data.get("flatrate", [])
     vistas, out        = set(), []
     for plat in plataformas_crudas:
@@ -675,7 +513,7 @@ def _procesar_plataformas(watch_data: dict, titulo: str) -> list:
 
 
 # ══════════════════════════════════════════════════════════════════
-#  RESTO DE RUTAS (sin cambios)
+#  RESTO DE RUTAS
 # ══════════════════════════════════════════════════════════════════
 
 @app.get("/foro/{movie_id}", response_class=HTMLResponse)
