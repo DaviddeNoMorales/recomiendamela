@@ -69,7 +69,7 @@
                             <input type="email"    name="email"    placeholder="Email real" required>
                             <input type="text"     name="username" placeholder="Usuario" required>
                             <input type="password" name="password" placeholder="Contraseña" required>
-                            <button type="submit" class="btn-primary" style="width:100%; background:transparent; border:1px solid var(--accent);">Registrarse</button>
+                            <button type=\"submit\" class=\"btn-primary\" style=\"width:100%; background:transparent; border:1px solid var(--accent);\">Registrarse</button>
                         </form>
                     </div>
                 </div>
@@ -199,40 +199,22 @@
         const continuo = document.querySelector('.carrusel-continuo');
         if (continuo) {
             let isDown = false; let startX; let scrollLeftPos; let isHovered = false;
-
             function autoScroll() {
                 if (!isDown && !isHovered) {
-                    continuo.scrollLeft += 1;
+                    continuo.scrollLeft += 1; 
+                    if (continuo.scrollLeft >= continuo.scrollWidth / 2) { continuo.scrollLeft -= continuo.scrollWidth / 2; }
                 }
                 requestAnimationFrame(autoScroll);
             }
-
             continuo.addEventListener('mousedown', (e) => { isDown = true; continuo.style.cursor = 'grabbing'; startX = e.pageX - continuo.offsetLeft; scrollLeftPos = continuo.scrollLeft; });
             continuo.addEventListener('mouseleave', () => { isDown = false; isHovered = false; continuo.style.cursor = 'grab'; });
             continuo.addEventListener('mouseup', () => { isDown = false; continuo.style.cursor = 'grab'; });
             continuo.addEventListener('mouseenter', () => { isHovered = true; });
             continuo.addEventListener('mousemove', (e) => {
-                if (!isDown) return;
-                e.preventDefault();
-                const x = e.pageX - continuo.offsetLeft;
-                const walk = (x - startX) * 1.5;
-                continuo.scrollLeft = scrollLeftPos - walk;
-            });
-
-            continuo.addEventListener('touchstart', () => isHovered = true, { passive: true });
-            continuo.addEventListener('touchend', () => isHovered = false, { passive: true });
-
-            /* ── Wraparound centralizado: cubre autoplay, drag Y swipe táctil ── */
-            continuo.addEventListener('scroll', () => {
-                if (isDown) return;
+                if (!isDown) return; e.preventDefault(); const x = e.pageX - continuo.offsetLeft; const walk = (x - startX) * 1.5; continuo.scrollLeft = scrollLeftPos - walk;
                 const maxScroll = continuo.scrollWidth / 2;
-                if (continuo.scrollLeft <= 0) {
-                    continuo.scrollLeft += maxScroll;
-                } else if (continuo.scrollLeft >= maxScroll) {
-                    continuo.scrollLeft -= maxScroll;
-                }
+                if (continuo.scrollLeft >= maxScroll) { continuo.scrollLeft -= maxScroll; scrollLeftPos -= maxScroll; } else if (continuo.scrollLeft <= 0) { continuo.scrollLeft += maxScroll; scrollLeftPos += maxScroll; }
             });
-
             requestAnimationFrame(autoScroll);
         }
     </script>
