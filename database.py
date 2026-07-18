@@ -100,3 +100,9 @@ def inicializar_db():
     conn.commit()
     conn.close()
     print("PostgreSQL inicializado correctamente con Psycopg 3.")
+    
+    import hashlib
+
+def hash_password(password: str) -> str:
+    """Convierte una contraseña a formato hash SHA-256."""
+    return hashlib.sha256(password.encode()).hexdigest()
