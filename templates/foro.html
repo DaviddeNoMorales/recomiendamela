@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Recomiendamela</title>
+    <link rel="stylesheet" href="/static/index.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+</head>
+<body>
+
+    <div class="navbar" id="navbar" {% if modo_busqueda or error %}style="background: rgba(13,13,15,0.98); position: relative; border-bottom: 1px solid var(--border);"{% endif %}>
+
+        <a href="/" class="logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                <line x1="7" y1="2" x2="7" y2="22"></line>
+                <line x1="17" y1="2" x2="17" y2="22"></line>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+                <line x1="2" y1="7" x2="7" y2="7"></line>
+                <line x1="2" y1="17" x2="7" y2="17"></line>
+                <line x1="17" y1="17" x2="22" y2="17"></line>
+                <line x1="17" y1="7" x2="22" y2="7"></line>
+            </svg>
+            RECOMIENDAMELA
+        </a>
+
+        {% if user_id %}
+            <div class="auth-forms-container">
+                <img src="{{ user_avatar }}" class="nav-avatar" alt="Avatar">
+                <span class="nav-username">{{ username }}</span>
+                <a href="#" class="btn-nav" onclick="abrirAjustes()">⚙️ Ajustes</a>
+                <a href="/perfil" class="btn-nav">Perfil</a>
+                <a href="/auth/logout" class="btn-nav btn-danger">Salir</a>
+            </div>
+
+        {% else %}
+            <div class="auth-forms-container desktop-auth">
+                <form action="/auth/login" method="post" class="form-login">
+                    <input type="text"     name="username" placeholder="Usuario"   required>
+                    <input type="password" name="password" placeholder="Contraseña" required>
+                    <button type="submit" class="btn-primary">Entrar</button>
+                </form>
+                <div class="auth-divider">|</div>
+                <form action="/auth/register" method="post" class="form-login">
+                    <input type="email"    name="email"    placeholder="Tu Email (Real)" required>
+                    <input type="text"     name="username" placeholder="Usuario" required>
+                    <input type="password" name="password" placeholder="Contraseña" required>
+                    <button type="submit" class="btn-primary" style="background: transparent; border: 1px solid var(--accent);">
+                        Registro
+                    </button>
+                </form>
+            </div>
+
+            <div class="auth-forms-container mobile-auth">
+                <div class="dropdown" style="flex:1;">
+                    <button class="btn-primary btn-drop" onclick="toggleDrop(event,'drop-login')">Entrar ▾</button>
+                    <div id="drop-login" class="dropdown-content" onclick="event.stopPropagation()">
+                        <form action="/auth/login" method="post" class="form-login-mob">
+                            <input type="text"     name="username" placeholder="Usuario"   required>
+                            <input type="password" name="password" placeholder="Contraseña" required>
+                            <button type="submit" class="btn-primary" style="width:100%;">Iniciar sesión</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="dropdown" style="flex:1;">
+                    <button class="btn-primary btn-drop" style="background:transparent; border:1px solid var(--accent);" onclick="toggleDrop(event,'drop-reg')">Registro ▾</button>
+                    <div id="drop-reg" class="dropdown-content" onclick="event.stopPropagation()">
+                        <form action="/auth/register" method="post" class="form-login-mob">
+                            <input type="email"    name="email"    placeholder="Email real" required>
+                            <input type="text"     name="username" placeholder="Usuario" required>
+                            <input type="password" name="password" placeholder="Contraseña" required>
+                            <button type="submit" class="btn-primary" style="width:100%; background:transparent; border:1px solid var(--accent);">Registrarse</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="modal-overlay" id="modalAjustes">
+        <div class="modal-content">
+            <span class="modal-close" onclick="cerrarAjustes()">✖</span>
+            <h2 class="modal-title">Ajustes de Cuenta</h2>
+            <form action="/ajustes/actualizar" method="post">
+                <div class="form-group">
+                    <label>Nuevo Nombre de Usuario</label>
+                    <input type="text" name="nuevo_user" placeholder="Dejar en blanco para no cambiar">
+                </div>
+                <div class="form-group">
+                    <label>Nueva Contraseña</label>
+                    <input type="password" name="nueva_pass" placeholder="Dejar en blanco para no cambiar">
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%;">Guardar Cambios</button>
+            </form>
+        </div>
+    </div>
+
+
+    {% if error %}
+    <div class="error-busqueda-container">
+        <form action="/" method="get" class="search-wrapper" style="width:100%; max-width:560px;">
+            <input type="text" name="query" placeholder="Busca películas, juegos, libros, cómics…" value="{{ query_actual }}" required>
+            <button type="submit" class="btn-primary" style="padding:11px 20px;">🔍</button>
+        </form>
+        <h1 class="error-title">No se encontró la búsqueda.<br>¿Seguro que se llama así?</h1>
+    </div>
+    {% endif %}
+
+
+    {% if modo_busqueda and not error %}
+    <div class="resultados-wrapper">
+        <div class="search-top">
+            <form action="/" method="get" class="search-wrapper">
+                <input type="text" name="query" placeholder="Busca películas, juegos, libros, cómics…" value="{{ query_actual }}" required>
+                <button type="submit" class="btn-primary" style="padding:11px 20px;">🔍</button>
+            </form>
+        </div>
+        <p class="resultados-titulo">Resultados para <span>"{{ query_actual }}"</span></p>
+        
+        {% if resultados_busqueda_cine %}
+        <div class="categoria-header"><div class="categoria-bar cine"></div><span class="categoria-titulo">🍿 Películas y Series</span></div>
+        <div class="tendencias-container">
+            {% for res in resultados_busqueda_cine %}
+                {% if res.poster_url %}
+                <a href="/?movie_id={{ res.id }}&media_type={{ res.media_type or 'movie' }}" class="item-carrusel"><img src="{{ res.poster_url }}"><p>{{ res.title }}</p></a>
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if peli and not modo_busqueda and not error %}
+    <div class="hero-banner {% if media_type == 'book' %}hero-libro{% endif %}" style="background-image: url('{{ peli.backdrop_url or peli.poster_url }}');" id="hero">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+
+            <form action="/" method="get" class="search-wrapper" style="margin-bottom:24px; max-width:500px;">
+                <input type="text" name="query" placeholder="Busca películas, juegos, libros, cómics…" required>
+                <button type="submit" class="btn-primary" style="padding:11px 20px;">🔍</button>
+            </form>
+
+            <h1>{{ peli.title }}</h1>
+            <div class="meta">
+                <div class="meta-rating"><span class="nota">⭐ {{ peli.vote_average }} / 10</span><span class="nota-fuente">{{ peli.fuente_nota or 'IMDb' }}</span></div>
+                <span class="meta-year">{{ peli.release_date[:4] if peli.release_date else '' }}</span>
+                {% if media_type == 'tv' %}<span class="badge-tipo badge-tv">Serie</span>
+                {% elif media_type == 'game' %}<span class="badge-tipo badge-game">Videojuego</span>
+                {% elif media_type == 'book' %}<span class="badge-tipo badge-book">📚 Libro / Cómic</span>
+                {% else %}<span class="badge-tipo badge-movie">Película</span>{% endif %}
+            </div>
+
+            <p class="sinopsis">{{ peli.overview or "No hay sinopsis disponible." }}</p>
+
+            <div class="acciones">
+                {% if user_id %}
+                    <form action="{% if is_pen %}/accion/pen/remove{% else %}/accion/pen/add{% endif %}" method="post" class="form-accion" data-type="pen" style="margin:0;">
+                        <input type="hidden" name="movie_id" value="{{ peli.id }}"><input type="hidden" name="title" value="{{ peli.title }}"><input type="hidden" name="poster_url" value="{{ peli.poster_url }}">
+                        <button type="submit" class="btn-icon btn-pen {% if is_pen %}iluminado{% endif %}">▶ {% if is_pen %}¡Recomendada!{% else %}¿Me la recomiendas?{% endif %}</button>
+                    </form>
+                {% else %}
+                    <span class="lock-hint">🔒 Inicia sesión para guardar</span>
+                {% endif %}
+                <a href="/foro/{{ peli.id }}" class="btn-icon">💬 Ir al Foro</a>
+            </div>
+
+        </div>
+    </div>
+    {% endif %}
+
+    {% if carrusel_pelis and not modo_busqueda and not error %}
+    <div class="seccion-carrusel" {% if not (trailer and busqueda_activa) and not busqueda_activa %}style="margin-top:-60px;"{% endif %}>
+        <div class="carrusel-header"><span class="carrusel-titulo">{{ carrusel_titulo }}</span></div>
+        <div class="carrusel-continuo">
+            <div class="carrusel-track">
+                {% for cp in carrusel_pelis %}
+                    {% if cp.poster_url %}<a href="/?movie_id={{ cp.id }}&media_type={{ cp.media_type or 'movie' }}" class="item-peli"><img src="{{ cp.poster_url }}"></a>{% endif %}
+                {% endfor %}
+                {% for cp in carrusel_pelis %}
+                    {% if cp.poster_url %}<a href="/?movie_id={{ cp.id }}&media_type={{ cp.media_type or 'movie' }}" class="item-peli" aria-hidden="true"><img src="{{ cp.poster_url }}"></a>{% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+
+    <script>
+        function abrirAjustes() { document.getElementById('modalAjustes').style.display = 'flex'; }
+        function cerrarAjustes() { document.getElementById('modalAjustes').style.display = 'none'; }
+
+        /* ── Scroll navbar ─────────────────────────────── */
+        const navbar = document.getElementById('navbar');
+        if (navbar && !navbar.style.position.includes('relative')) {
+            window.addEventListener('scroll', () => { navbar.classList.toggle('scrolled', window.scrollY > 40); }, { passive: true });
+        }
+
+        /* ── MAGIA JS: Carrusel Infinito + Manual ──────── */
+        const continuo = document.querySelector('.carrusel-continuo');
+        if (continuo) {
+            let isDown = false; let startX; let scrollLeftPos; let isHovered = false;
+
+            function autoScroll() {
+                if (!isDown && !isHovered) {
+                    continuo.scrollLeft += 1;
+                }
+                requestAnimationFrame(autoScroll);
+            }
+
+            continuo.addEventListener('mousedown', (e) => { isDown = true; continuo.style.cursor = 'grabbing'; startX = e.pageX - continuo.offsetLeft; scrollLeftPos = continuo.scrollLeft; });
+            continuo.addEventListener('mouseleave', () => { isDown = false; isHovered = false; continuo.style.cursor = 'grab'; });
+            continuo.addEventListener('mouseup', () => { isDown = false; continuo.style.cursor = 'grab'; });
+            continuo.addEventListener('mouseenter', () => { isHovered = true; });
+            continuo.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - continuo.offsetLeft;
+                const walk = (x - startX) * 1.5;
+                continuo.scrollLeft = scrollLeftPos - walk;
+            });
+
+            continuo.addEventListener('touchstart', () => isHovered = true, { passive: true });
+            continuo.addEventListener('touchend', () => isHovered = false, { passive: true });
+
+            /* ── Wraparound centralizado: cubre autoplay, drag Y swipe táctil ── */
+            continuo.addEventListener('scroll', () => {
+                if (isDown) return;
+                const maxScroll = continuo.scrollWidth / 2;
+                if (continuo.scrollLeft <= 0) {
+                    continuo.scrollLeft += maxScroll;
+                } else if (continuo.scrollLeft >= maxScroll) {
+                    continuo.scrollLeft -= maxScroll;
+                }
+            });
+
+            requestAnimationFrame(autoScroll);
+        }
+    </script>
+</body>
+</html>

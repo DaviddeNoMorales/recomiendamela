@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mi Perfil - Recomiendamela</title>
+    <link rel="stylesheet" href="/static/index.css">
+    <link rel="stylesheet" href="/static/perfil.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+</head>
+<body>
+
+    <div class="navbar" style="background: #000; position: relative; z-index: 10;">
+        <a href="/" class="logo">Recomiendamela</a>
+        
+        <form action="/" method="get" class="form-buscar-perfil">
+            <input type="text" name="query" placeholder="Buscar película..." required>
+            <button type="submit" class="btn-primary">🔍</button>
+        </form>
+
+        <div class="auth-forms-container">
+            <a href="/" class="btn-nav">Inicio</a>
+            <a href="/auth/logout" class="btn-nav btn-danger">Salir</a>
+        </div>
+    </div>
+
+    <div class="perfil-hero" style="padding: 40px 4%; color: white; background: #181818; border-bottom: 1px solid #222;">
+        <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+            
+            <div style="position: relative; display: inline-block;">
+                {% if user_avatar %}
+                    <img src="{{ user_avatar }}" alt="Avatar" style="width: 100px; height: 100px; border-radius: 50%; border: 3px solid #e50914; object-fit: cover;">
+                {% else %}
+                    <div style="width: 100px; height: 100px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 2rem; border: 3px solid #e50914;">👤</div>
+                {% endif %}
+                
+                <form action="/perfil/avatar" method="post" enctype="multipart/form-data" style="position: absolute; bottom: -5px; right: -5px; margin: 0; background: #e50914; border-radius: 50%; padding: 6px; cursor: pointer; border: 2px solid #181818; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                    <label for="avatar-upload" style="cursor: pointer; display: block; width: 20px; height: 20px; text-align: center; line-height: 20px; font-size: 14px;" title="Cambiar avatar">📷</label>
+                    <input type="file" id="avatar-upload" name="file" accept="image/*" style="display: none;" onchange="this.form.submit()">
+                </form>
+            </div>
+
+            <div>
+                <h1 style="margin: 0; font-size: 2.5rem;">{{ username }}</h1>
+                {% if is_admin or role == 'admin' %}
+                    <span style="background: #e50914; color: white; padding: 2px 8px; font-size: 12px; border-radius: 4px; font-weight: bold; display: inline-block; margin-top: 5px;">ADMINISTRADOR</span>
+                {% else %}
+                    <span style="background: #333; color: #aaa; padding: 2px 8px; font-size: 12px; border-radius: 4px; display: inline-block; margin-top: 5px;">Usuario Miembro</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div style="padding: 20px 4%;">
+
+        {% if is_admin or role == 'admin' %}
+        <div class="admin-panel-container" style="margin-bottom: 40px; background: #1f1f1f; padding: 20px; border-radius: 8px; border: 1px solid #e50914;">
+            <h2 style="color: #e50914; margin-bottom: 15px; font-size: 22px; display: flex; align-items: center; gap: 10px;">🛠️ Panel de Control de Usuarios</h2>
+            <p style="color: #aaa; font-size: 14px; margin-bottom: 15px;">Como administrador, puedes gestionar las cuentas activas en la plataforma:</p>
+            
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; color: white; text-align: left; font-size: 14px;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #333; background: #111;">
+                            <th style="padding: 12px;">Usuario</th>
+                            <th style="padding: 12px;">Rol</th>
+                            <th style="padding: 12px; text-align: center;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set lista_control_usuarios = usuarios or lista_usuarios %}
+                        {% if lista_control_usuarios %}
+                            {% for u in lista_control_usuarios %}
+                            <tr style="border-bottom: 1px solid #222; background: rgba(0,0,0,0.2);">
+                                <td style="padding: 12px; font-weight: bold;">{{ u.username }}</td>
+                                <td style="padding: 12px;">
+                                    <span style="color: {% if u.role == 'admin' or u.is_admin %}#e50914{% else %}#aaa{% endif %};">
+                                        {{ u.role or ('Administrador' if u.is_admin else 'Usuario') }}
+                                    </span>
+                                </td>
+                                <td style="padding: 12px; display: flex; gap: 10px; justify-content: center;">
+                                    <a href="/admin/usuario/editar/{{ u.id }}" class="btn-primary" style="padding: 5px 12px; font-size: 12px; background: #28a745; text-decoration: none; border-radius: 4px;">Modificar</a>
+                                    <form action="/admin/usuario/borrar/{{ u.id }}" method="post" style="margin: 0;" onsubmit="return confirm('¿Estás seguro de que deseas eliminar permanentemente a este usuario?');">
+                                        <button type="submit" class="btn-primary" style="padding: 5px 12px; font-size: 12px; background: #e50914; border-radius: 4px; cursor: pointer;">Borrar</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="3" style="padding: 20px; text-align: center; color: #666;">No se han podido cargar otros usuarios o eres el único registrado en la base de datos.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        {% set mis_pendientes = peli_pendientes or pendientes or lista_pendientes or watchlist %}
+        <h2 style="color: white; border-left: 4px solid #28a745; padding-left: 10px; margin-bottom: 20px; font-size: 22px;">Recomendadas</h2>
+        
+        {% if mis_pendientes %}
+        <div class="grid-peliculas" style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 40px;">
+            {% for p in mis_pendientes %}
+            <a href="/?movie_id={{ p.movie_id or p.id }}" class="item-peli" style="width: 45%; max-width: 160px; text-decoration: none; display: block;">
+                <img src="{{ p.poster_url }}" alt="{{ p.title }}" style="width: 100%; border-radius: 8px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                <p style="color: white; font-size: 13px; text-align: center; margin-top: 8px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ p.title }}</p>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="background: #1f1f1f; padding: 20px; border-radius: 8px; text-align: center; color: #666; margin-bottom: 40px;">
+            <p>No tienes ninguna recomendación marcada como pendiente.</p>
+        </div>
+        {% endif %}
+
+        <h2 style="color: white; border-left: 4px solid #e50914; padding-left: 10px; margin-bottom: 20px; font-size: 22px;">Mis Favoritas</h2>
+
+        {% set por_genero = favoritos_por_genero or peli_favoritas_por_genero %}
+        {% set flat_favoritas = peli_favoritas or favoritas or favoritos or lista_favoritas %}
+
+        {% if por_genero and por_genero.items %}
+            {% for genero, info in por_genero.items() %}
+                <div class="contenedor-genero" style="margin-bottom: 35px; background: rgba(255,255,255,0.02); padding: 15px; border-radius: 8px; border: 1px solid #222;">
+                    <h3 style="color: #e50914; margin-bottom: 15px; font-size: 18px; font-weight: bold;">🍿 {{ genero }}</h3>
+                    
+                    <div class="grid-peliculas" style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px;">
+                        {% set pelis_del_genero = info.peliculas or info %}
+                        {% if pelis_del_genero and not pelis_del_genero.items %}
+                            {% for p in pelis_del_genero %}
+                            <a href="/?movie_id={{ p.movie_id or p.id }}" class="item-peli" style="width: 45%; max-width: 140px; text-decoration: none; display: block;">
+                                <img src="{{ p.poster_url }}" alt="{{ p.title }}" style="width: 100%; border-radius: 8px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                <p style="color: white; font-size: 12px; text-align: center; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ p.title }}</p>
+                            </a>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+
+                    {% set recom_del_genero = info.recomendaciones or info.quizas_te_guste %}
+                    {% if recom_del_genero %}
+                    <div class="seccion-quizas" style="margin-top: 15px; border-top: 1px solid #333; padding-top: 15px;">
+                        <p style="color: #aaa; font-size: 13px; font-weight: bold; margin-bottom: 10px; letter-spacing: 0.5px;">✨ Quizás te puede gustar:</p>
+                        <div class="carrusel-recomendaciones" style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px;">
+                            {% for r in recom_del_genero %}
+                            <a href="/?movie_id={{ r.movie_id or r.id }}" style="flex: 0 0 auto; width: 110px; text-decoration: none; display: block;">
+                                <img src="{{ r.poster_url }}" alt="{{ r.title }}" style="width: 100%; border-radius: 6px;">
+                                <p style="color: #888; font-size: 11px; text-align: center; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ r.title }}</p>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+
+        {% elif flat_favoritas %}
+            <div class="grid-peliculas" style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 40px;">
+                {% for p in flat_favoritas %}
+                <a href="/?movie_id={{ p.movie_id or p.id }}" class="item-peli" style="width: 45%; max-width: 160px; text-decoration: none; display: block;">
+                    <img src="{{ p.poster_url }}" alt="{{ p.title }}" style="width: 100%; border-radius: 8px;">
+                    <p style="color: white; font-size: 13px; text-align: center; margin-top: 8px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ p.title }}</p>
+                </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div style="background: #1f1f1f; padding: 20px; border-radius: 8px; text-align: center; color: #666; margin-bottom: 40px;">
+                <p>Aún no has añadido películas a tu lista de favoritos.</p>
+            </div>
+        {% endif %}
+
+    </div>
+
+    <script>
+        document.querySelectorAll('.carrusel-recomendaciones').forEach(carrusel => {
+            carrusel.addEventListener('wheel', function(e) {
+                if (e.deltaY !== 0) {
+                    e.preventDefault();
+                    this.scrollLeft += e.deltaY;
+                }
+            }, { passive: false });
+        });
+    </script>
+</body>
+</html>
